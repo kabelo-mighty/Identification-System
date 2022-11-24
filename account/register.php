@@ -68,7 +68,7 @@ if(isset($_POST['name']))
    {
 
     $sql="INSERT INTO person(firstname, lastname, gender, dateOfbirth, id_number, phone, house_no, street_name, suburb, city, province, zip_code, country, keen_firstname, keen_lastname, keen_email, keen_phone, email, employee_type, password, confirmed_acc) 
-    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','$country','$keenfirstname','$keenlastname','$email','$kphone','$kemail','default','$password','0')";
+    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','$country','$keenfirstname','$keenlastname','$kemail','$kphone','$email','default','$password','0')";
 
 
 
@@ -94,7 +94,7 @@ if(isset($_POST['name']))
 
 
     $sql="INSERT INTO person(firstname, lastname, gender, dateOfbirth, id_number, phone, house_no, street_name, suburb, city, province, zip_code, country, keen_firstname, keen_lastname, keen_email, keen_phone, email, employee_type, password, confirmed_acc) 
-    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','South Africa','$keenfirstname','$keenlastname','$email','$kphone','$kemail','default','$password','0')";
+    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','South Africa','$keenfirstname','$keenlastname','$kemail','$kphone','$email','default','$password','0')";
 
 
 

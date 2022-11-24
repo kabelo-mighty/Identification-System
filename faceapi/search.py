@@ -32,30 +32,35 @@ print()
    
 file_exists = os.path.exists("person_face_id/"+idno+".jpg")
 
-if(file_exists):
 
+try:
+    
+    if(file_exists):
+      got_image = face_recognition.load_image_file("image.png")
+      existing_image = face_recognition.load_image_file("person_face_id/"+idno+".jpg")
 
-    got_image = face_recognition.load_image_file("image.png")
+      got_image_facialfeatures = face_recognition.face_encodings(got_image)[0]
 
-    existing_image = face_recognition.load_image_file("person_face_id/"+idno+".jpg")
+      existing_image_facialfeatures = face_recognition.face_encodings(existing_image)[0]
 
-    got_image_facialfeatures = face_recognition.face_encodings(got_image)[0]
+      results= face_recognition.compare_faces([existing_image_facialfeatures],got_image_facialfeatures)
 
-    existing_image_facialfeatures = face_recognition.face_encodings(existing_image)[0]
-
-    results= face_recognition.compare_faces([existing_image_facialfeatures],got_image_facialfeatures)
-
-    if(results[0]):
+      if(results[0]):
         face_match=1
-    else:
+      else:
         face_match=0
    
 
 
-    if(face_match==1):
+      if(face_match==1):
         print("<script>alert('Information Retrieved');window.location = 'information.php?edt="+idno+"'</script>;</script>")
 
-    else:
+      else:
         print("<script>alert('face not recognized');window.location = 'face.php';</script>")
-else:
-    print("<script>alert('face not found');window.location = 'face.php';</script>") 
+    else:
+        print("<script>alert('face not found');window.location = 'face.php';</script>") 
+except (IndexError, ValueError):
+        print("<script>alert('try again,request took long to fetch results');window.location = 'face.php';</script>")
+ 
+
+   
