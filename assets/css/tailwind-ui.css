@@ -74,10 +74,20 @@ body.app-shell {
   width: 100%;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.7);
-  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.92);
+  color: #03244a;
+  caret-color: #f8fafc;
   padding: 0.95rem 1rem;
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.app-input,
+.app-input:focus,
+.app-select,
+.app-select:focus,
+.app-textarea,
+.app-textarea:focus {
+  color-scheme: dark;
 }
 
 .app-input::placeholder,
@@ -91,6 +101,25 @@ body.app-shell {
   outline: none;
   border-color: rgba(56, 189, 248, 0.68);
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+}
+
+.app-input:-webkit-autofill,
+.app-input:-webkit-autofill:hover,
+.app-input:-webkit-autofill:focus,
+.app-select:-webkit-autofill,
+.app-select:-webkit-autofill:hover,
+.app-select:-webkit-autofill:focus,
+.app-textarea:-webkit-autofill,
+.app-textarea:-webkit-autofill:hover,
+.app-textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  box-shadow: inset 0 0 0 1000px rgba(2, 6, 23, 0.92);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.app-select option {
+  background: #020617;
+  color: #f8fafc;
 }
 
 .app-label {
@@ -200,6 +229,227 @@ body.app-shell {
   color: #dcfce7;
 }
 
+.app-toast-viewport {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 1000;
+  width: min(26rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.app-toast {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.9rem;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(6, 12, 24, 0.92);
+  box-shadow: 0 26px 80px rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(18px);
+  padding: 1rem 1rem 1rem 0.95rem;
+  pointer-events: auto;
+  animation: app-toast-enter 220ms ease forwards;
+}
+
+.app-toast.is-hiding {
+  animation: app-toast-exit 220ms ease forwards;
+}
+
+.app-toast-success {
+  border-color: rgba(74, 222, 128, 0.28);
+}
+
+.app-toast-danger {
+  border-color: rgba(251, 113, 133, 0.28);
+}
+
+.app-toast-info {
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+.app-toast__icon {
+  margin-top: 0.1rem;
+  display: flex;
+  height: 2.6rem;
+  width: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.app-toast-success .app-toast__icon {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.app-toast-danger .app-toast__icon {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.12);
+}
+
+.app-toast-info .app-toast__icon {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.app-toast__icon-mark {
+  position: relative;
+  display: inline-block;
+}
+
+.app-toast__icon-mark-check {
+  width: 0.9rem;
+  height: 0.55rem;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.app-toast__icon-mark-info {
+  width: 0.28rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.app-toast__icon-mark-info::before {
+  content: '';
+  position: absolute;
+  top: -0.42rem;
+  left: 50%;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.app-toast__icon-mark-triangle-alert {
+  width: 0;
+  height: 0;
+  border-left: 0.55rem solid transparent;
+  border-right: 0.55rem solid transparent;
+  border-bottom: 1rem solid currentColor;
+}
+
+.app-toast__icon-mark-triangle-alert::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.36rem;
+  width: 0.12rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: #08111d;
+  transform: translateX(-50%);
+}
+
+.app-toast__icon-mark-triangle-alert::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.72rem;
+  width: 0.12rem;
+  height: 0.12rem;
+  border-radius: 999px;
+  background: #08111d;
+  transform: translateX(-50%);
+}
+
+.app-toast__body {
+  min-width: 0;
+}
+
+.app-toast__eyebrow {
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.app-toast__message {
+  margin-top: 0.35rem;
+  color: #f8fafc;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.app-toast__close {
+  align-self: start;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem;
+}
+
+.app-toast__close:hover {
+  color: #f8fafc;
+}
+
+.app-toast__progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left center;
+  animation: app-toast-progress 4.6s linear forwards;
+}
+
+.app-toast-success .app-toast__progress {
+  background: linear-gradient(90deg, rgba(74, 222, 128, 0.85), rgba(16, 185, 129, 0.85));
+}
+
+.app-toast-danger .app-toast__progress {
+  background: linear-gradient(90deg, rgba(251, 113, 133, 0.85), rgba(244, 63, 94, 0.85));
+}
+
+.app-toast-info .app-toast__progress {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.85), rgba(14, 165, 233, 0.85));
+}
+
+@keyframes app-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+@keyframes app-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .app-error {
   margin-top: 0.45rem;
   display: block;
@@ -226,5 +476,12 @@ body.app-shell {
 
   .app-stat-value {
     font-size: 1.6rem;
+  }
+
+  .app-toast-viewport {
+    top: 0.85rem;
+    right: 0.85rem;
+    left: 0.85rem;
+    width: auto;
   }
 }

@@ -42,22 +42,96 @@ function app_get_flash_message()
     return $message === '' ? null : $message;
 }
 
-function app_render_alert($message)
+function app_get_flash_tone($message)
+{
+    $value = strtolower(trim((string) $message));
+
+    if ($value === '') {
+        return 'info';
+    }
+
+    $successKeywords = [
+        'success',
+        'successful',
+        'updated',
+        'created',
+        'saved',
+        'confirmed',
+        'assigned',
+        'completed',
+        'logged in',
+        'login successful',
+    ];
+    foreach ($successKeywords as $keyword) {
+        if (strpos($value, $keyword) !== false) {
+            return 'success';
+        }
+    }
+
+    $dangerKeywords = [
+        'wrong',
+        'invalid',
+        'expired',
+        'failed',
+        'could not',
+        'not found',
+        'unauthorized',
+        'required',
+        'denied',
+        'error',
+        'not be',
+        'only authorized',
+    ];
+    foreach ($dangerKeywords as $keyword) {
+        if (strpos($value, $keyword) !== false) {
+            return 'danger';
+        }
+    }
+
+    return 'info';
+}
+
+function app_render_toast($message, $tone = null)
 {
     if ($message === null || $message === '') {
         return '';
     }
 
-    return '<script>alert(' . json_encode($message) . ');</script>';
+    $resolvedTone = $tone ?? app_get_flash_tone($message);
+    $iconMap = [
+        'success' => 'check',
+        'danger' => 'triangle-alert',
+        'info' => 'info',
+    ];
+    $icon = $iconMap[$resolvedTone] ?? $iconMap['info'];
+    $liveMode = $resolvedTone === 'danger' ? 'assertive' : 'polite';
+
+    $markup = '<div class="app-toast-viewport" data-app-toast-root>';
+    $markup .= '<div class="app-toast app-toast-' . htmlspecialchars($resolvedTone, ENT_QUOTES, 'UTF-8') . '" role="status" aria-live="' . $liveMode . '" data-app-toast>';
+    $markup .= '<div class="app-toast__icon" aria-hidden="true">';
+    $markup .= '<span class="app-toast__icon-mark app-toast__icon-mark-' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '"></span>';
+    $markup .= '</div>';
+    $markup .= '<div class="app-toast__body">';
+    $markup .= '<div class="app-toast__eyebrow">Notification</div>';
+    $markup .= '<div class="app-toast__message">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</div>';
+    $markup .= '</div>';
+    $markup .= '<button class="app-toast__close" type="button" aria-label="Dismiss notification" data-app-toast-close>&times;</button>';
+    $markup .= '<div class="app-toast__progress"></div>';
+    $markup .= '</div>';
+    $markup .= '</div>';
+    $markup .= '<script>(function(){var root=document.currentScript.previousElementSibling;if(!root||root.dataset.appToastBound==="true"){return;}root.dataset.appToastBound="true";var toast=root.querySelector("[data-app-toast]");if(!toast){return;}var removeToast=function(){if(root.parentNode){root.parentNode.removeChild(root);}};var hideToast=function(){if(toast.classList.contains("is-hiding")){return;}toast.classList.add("is-hiding");window.setTimeout(removeToast,260);};window.setTimeout(hideToast,4600);root.addEventListener("click",function(event){if(event.target.closest("[data-app-toast-close]")){hideToast();}});})();</script>';
+
+    return $markup;
+}
+
+function app_render_alert($message)
+{
+    return app_render_toast($message);
 }
 
 function app_render_flash_banner($message)
 {
-    if ($message === null || $message === '') {
-        return '';
-    }
-
-    return '<div class="app-flash">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</div>';
+    return app_render_toast($message);
 }
 
 function app_hash_password($password)
