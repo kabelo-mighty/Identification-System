@@ -4,7 +4,9 @@ require_once '../src/auth.php';
 
 $flashMessage = app_get_flash_message();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    app_require_csrf_token('login.php');
+
     $email = app_normalize_email($_POST['email'] ?? '');
     $password = (string) ($_POST['password'] ?? '');
 
@@ -23,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         app_redirect('login.php', 'Wrong email or password.');
     }
 
-    if (strcasecmp($row['employee_type'], 'Police') !== 0) {
+    if (strcasecmp((string) $row['employee_type'], 'Police') !== 0) {
         app_redirect('login.php', 'Only authorized police users can use this service.');
     }
 
@@ -44,123 +46,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html  lang="en">
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System | Police Login</title><link rel="icon" href="../assets/img/logo.jpg">
-    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Muli">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
-    <link rel="stylesheet" href="assets/fonts/line-awesome.min.css">
-    <link rel="stylesheet" href="assets/css/alert.css">
-    <link rel="stylesheet" href="assets/css/Bootstrap-4---Profile-Creation-Wizard.css">
-    <link rel="stylesheet" href="assets/css/Contact-Form-Clean.css">
-    <link rel="stylesheet" href="assets/css/Customizable-Background--Overlay.css">
-    <link rel="stylesheet" href="assets/css/Footer-Basic.css">
-    <link rel="stylesheet" href="assets/css/FPE-Gentella-form-elements-1.css">
-    <link rel="stylesheet" href="assets/css/FPE-Gentella-form-elements.css">
-    <link rel="stylesheet" href="assets/css/Google-Style-Login.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css">
-    <link rel="stylesheet" href="assets/css/index-top-info-1.css">
-    <link rel="stylesheet" href="assets/css/index-top-info.css">
-    <link rel="stylesheet" href="assets/css/LinkedIn-like-Profile-Box.css">
-    <link rel="stylesheet" href="assets/css/Multi-step-form.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple-1.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple.css">
-    <link rel="stylesheet" href="assets/css/Navigation-Clean.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Search.css">
-    <link rel="stylesheet" href="assets/css/Profile-Card.css">
-    <link rel="stylesheet" href="assets/css/Profile-with-data-and-skills.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="stylesheet" href="assets/css/Video-Responsive.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Police Login</title>
+    <link rel="icon" href="../assets/img/logo.jpg">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
+    <link rel="stylesheet" href="../assets/css/tailwind-ui.css">
 </head>
-<script>
+<body class="app-shell hero-grid">
+    <div class="mx-auto flex min-h-screen max-w-[1480px] flex-col justify-center gap-6 px-4 py-6 lg:px-6">
+        <section class="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
+            <div class="glass-panel-strong app-card overflow-hidden rounded-[2.25rem] p-6 md:p-8 lg:p-10">
+                <div class="brand-badge">
+                    <i class="fa fa-shield"></i>
+                    Police-only access
+                </div>
+                <h1 class="mt-6 max-w-2xl text-4xl font-extrabold leading-tight text-white md:text-5xl">Secure face retrieval login for field operations.</h1>
+                <p class="mt-5 max-w-2xl text-base leading-7 text-slate-300">Sign in with an authorized police account to open the browser-based face verification workspace. The retrieval service matches a live capture against enrolled references without requiring a claimed ID number first.</p>
 
-    
-function validateForm() 
-{
-var uerror=document.getElementById("uerror");
-var perror=document.getElementById("perror");
+                <div class="mt-8 grid gap-4 md:grid-cols-3">
+                    <div class="app-stat">
+                        <div class="app-stat-value">Face-only</div>
+                        <div class="app-stat-label">Identity retrieval flow</div>
+                    </div>
+                    <div class="app-stat">
+                        <div class="app-stat-value">Local models</div>
+                        <div class="app-stat-label">Browser recognition stack</div>
+                    </div>
+                    <div class="app-stat">
+                        <div class="app-stat-value">Restricted</div>
+                        <div class="app-stat-label">Police accounts only</div>
+                    </div>
+                </div>
 
+                <div class="mt-8 grid gap-4 md:grid-cols-2">
+                    <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-5">
+                        <div class="app-kicker">What you can do</div>
+                        <ul class="mt-4 space-y-2 text-sm leading-6 text-slate-300">
+                            <li>Run camera-based face verification.</li>
+                            <li>Retrieve person information from enrolled references.</li>
+                            <li>Continue without the old Python search step.</li>
+                        </ul>
+                    </div>
+                    <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-5">
+                        <div class="app-kicker">Security rules</div>
+                        <ul class="mt-4 space-y-2 text-sm leading-6 text-slate-300">
+                            <li>Only authorized police accounts are accepted.</li>
+                            <li>Keep retrieved information confidential.</li>
+                            <li>Use a stable network and a clear camera feed.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
-if(document.forms["form"]["email"].value=="" && document.forms["form"]["password"].value=="")
-{
+            <div class="glass-panel app-card rounded-[2.25rem] p-6 md:p-8 lg:p-10">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <div class="app-kicker">Access portal</div>
+                        <h2 class="mt-3 text-3xl font-extrabold text-white">Police login</h2>
+                    </div>
+                    <a class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10" href="../index.php" title="Back to home">
+                        <i class="fa fa-times"></i>
+                    </a>
+                </div>
 
-uerror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+" Email field should not be empty *</span>"
-perror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+"Password field should not be empty *</span>"
+                <?php if ($flashMessage !== null) { ?>
+                    <div class="mt-6"><?php echo app_render_flash_banner($flashMessage); ?></div>
+                <?php } ?>
 
-return false;
+                <div class="mt-8 flex items-center gap-4 rounded-[1.5rem] border border-sky-400/20 bg-sky-400/10 px-5 py-4 text-sky-100">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-400/15 text-3xl">
+                        <i class="fa fa-unlock-alt"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200">Authorized access</p>
+                        <p class="mt-1 text-sm text-sky-100/90">Enter your police account credentials to continue to live face retrieval.</p>
+                    </div>
+                </div>
 
-}else
-if(document.forms["form"]["email"].value=="")
-{
+                <form method="post" action="" class="mt-8 space-y-5">
+                    <?php echo app_csrf_input(); ?>
+                    <div>
+                        <label class="app-label" for="email">Email address</label>
+                        <input class="app-input" type="email" id="email" name="email" autocomplete="username" required placeholder="officer@service.gov.za">
+                    </div>
+                    <div>
+                        <label class="app-label" for="password">Password</label>
+                        <input class="app-input" type="password" id="password" name="password" autocomplete="current-password" required placeholder="Enter your password">
+                    </div>
+                    <button class="app-button app-button-primary h-[3.5rem] w-full justify-center" type="submit">
+                        <i class="fa fa-sign-in"></i>
+                        Login to Face Retrieval
+                    </button>
+                </form>
 
-uerror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+"Please fill the email field *</span>"
-
-return false;
-
-}else
-{
-
-    uerror.innerHTML=""; 
-}
-
-if(document.forms["form"]["password"].value=="")
-{
-
-
-perror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+" Please fill the password field *</span>"
-
-return false;
-
-}else
-{
-
-    perror.innerHTML=""; 
-}
-
-}
-</script>
-<body style="background: rgb(255,255,255);">
-    <?php echo app_render_alert($flashMessage); ?>
-    <div class=" shadow-lg login-card"  style="margin-top: 130px;background: rgb(255,255,255);opacity: 0.91;">
-        <h3 class="text-uppercase" data-bs-toggle="tooltip" data-bss-tooltip="" style="font-size: 19px;text-align: right;color: rgb(46,35,253);" title="close"><a href="../index.php"><i class="fas fa-window-close" style="font-size: 21px;"></i></a>&nbsp;</h3>
-        <p style="text-align: center;"><i class="la la-unlock" style="font-size: 131px;color: rgb(89,81,253);"></i></p>
-        <h1 class="text-uppercase" style="font-size: 19px;text-align: left;color: rgb(46,35,253);"></h1>
-        <h3 class="text-uppercase" style="font-size: 19px;text-align: center;color: rgb(46,35,253);"><strong>Police Login</strong>&nbsp;</h3>
-        <form class="form-signin" name="form" onsubmit="return validateForm();"  method="post" action="">
-        <span class="reauth-email"> </span><input class="form-control"  type="email" id="email"  name="email" placeholder="Email address" autofocus="" style="font-size: 14px;"><span id="uerror"></span>
-        <input class="form-control" type="password" id="password" name="password" placeholder="Password" style="font-size: 14px;"><span id="perror"></span>
-            <div class="checkbox"></div><button class="btn btn-primary btn-lg d-block btn-signin w-100" type="submit" style="background: rgb(48,37,252);color: var(--color-white);">Login</button>
-        </form>
+                <div class="mt-6 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-5 text-sm leading-6 text-slate-300">
+                    This login is reserved for police operators. If your account is not assigned to police access, the face retrieval service will reject the session.
+                </div>
+            </div>
+        </section>
     </div>
-    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="assets/js/bs-init.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-1.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-2.js"></script>
-    <script src="assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="assets/js/Multi-step-form.js"></script>
-    <script src="assets/js/Navbar---Apple.js"></script>
 </body>
-
 </html>

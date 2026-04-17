@@ -1,206 +1,226 @@
-<?php include 'inc/session.php';?>
-<?php $flashMessage = app_get_flash_message(); ?>
+<?php include 'inc/session.php'; ?>
+<?php include 'inc/connect.php'; ?>
+<?php
+$flashMessage = app_get_flash_message();
 
+$adminName = 'Administrator';
+$adminStatement = mysqli_prepare($conn, 'SELECT firstname, lastname FROM admin WHERE admin_id = ? LIMIT 1');
+if ($adminStatement) {
+    mysqli_stmt_bind_param($adminStatement, 'i', $id);
+    mysqli_stmt_execute($adminStatement);
+    $adminResult = mysqli_stmt_get_result($adminStatement);
+    $adminRow = mysqli_fetch_assoc($adminResult);
+    mysqli_stmt_close($adminStatement);
+
+    if ($adminRow) {
+        $adminName = trim($adminRow['firstname'] . ' ' . $adminRow['lastname']);
+    }
+}
+
+$records = [];
+$personResult = mysqli_query($conn, 'SELECT person_id, firstname, lastname, id_number FROM person ORDER BY firstname ASC, lastname ASC');
+
+$totalDockets = 0;
+$peopleWithCases = 0;
+
+if ($personResult) {
+    while ($person = mysqli_fetch_assoc($personResult)) {
+        $dockets = [];
+        $personId = (int) $person['person_id'];
+        $docketResult = mysqli_query($conn, "SELECT * FROM docket WHERE person_id = '" . mysqli_real_escape_string($conn, (string) $personId) . "' ORDER BY year ASC, docket_id ASC");
+
+        if ($docketResult) {
+            while ($docket = mysqli_fetch_assoc($docketResult)) {
+                $dockets[] = [
+                    'docket_id' => (int) $docket['docket_id'],
+                    'crime_type' => (string) $docket['crime_type'],
+                    'year' => (string) $docket['year'],
+                ];
+            }
+        }
+
+        if (count($dockets) > 0) {
+            $peopleWithCases += 1;
+            $totalDockets += count($dockets);
+        }
+
+        $records[] = [
+            'person_id' => $personId,
+            'full_name' => trim($person['firstname'] . ' ' . $person['lastname']),
+            'id_number' => (string) $person['id_number'],
+            'dockets' => $dockets,
+        ];
+    }
+}
+
+$peopleCount = count($records);
+$peopleWithoutCases = $peopleCount - $peopleWithCases;
+?>
 <!DOCTYPE html>
-<html style="font-family: Nunito, sans-serif;">
-<?php include'inc/connect.php'; ?>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System |Criminal Record</title><link rel="icon" href="assets/img/logo.png">
-    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee&amp;display=swap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Cases</title>
+    <link rel="icon" href="assets/img/logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="../assets/fonts/font-awesome.min.css">
     <link rel="stylesheet" href="../assets/fonts/fontawesome5-overrides.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="../../assets/css/tailwind-ui.css">
 </head>
-
-<body id="page-top" >
-    <?php echo app_render_alert($flashMessage); ?>
-    <div id="wrapper">
-        <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
-            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#"><i class="fa fa-eye"></i>
-                    <div class="sidebar-brand-icon rotate-n-15"></div>
-                    <div class="sidebar-brand-text mx-3"><span>is system</span></div>
-                </a>
-                <hr class="sidebar-divider my-0">
-                <?php include'inc/toggle.php';?>
-                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
-            </div>
-        </nav>
-        <div class="d-flex flex-column" id="content-wrapper">
-
-
-
-
-            <div id="content">
-                <nav class="navbar navbar-light navbar-expand bg-white shadow mb-4 topbar static-top">
-                    <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
-                        <ul class="navbar-nav flex-nowrap ms-auto">
-                            <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
-                                <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
-                                    <form class="me-auto navbar-search w-100">
-                                        <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ...">
-                                            <div class="input-group-append"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </li>
-                            <div class="d-none d-sm-block topbar-divider"></div>
-                            <li class="nav-item dropdown no-arrow">
-                                <!--acc-->    
-                            <?php include'inc/nav.php';?>
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-                <div class="container-fluid">
-          
-                    <div class="card shadow">
-                        <div class="card-header py-3">
-                            <p class="text-primary m-0 fw-bold">Criminal Record&nbsp;</p>
-                        </div>
-                        <div class="col-md-6 col-xl-12 offset-md-3 offset-xl-0">
-                       
-                        <div id="faqlist" class="accordion accordion-flush">
-
-                        <?PHP
-
-
-// select products.id, products.title, productimages.imageurl
-// from products
-// join productimages on products.id = productimages.productid
-// ORDER BY products.id LIMIT 10
-
-                       
-              $query="SELECT
-              *
-          FROM
-              person";
-              $result=mysqli_query($conn,$query);
-              
-              $rows=mysqli_num_rows($result); 
-
-
-    
-
-              if ($rows>0) {
-              $x=1;
-                while ($rows=mysqli_fetch_array($result)) {    
-              ?>
-
-        <div class="accordion-item">
-
-            <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#content-accordion-<?php echo $x?>">#<?php echo $x; ?> <?php echo $rows['firstname'].' '.$rows['lastname'];?></button></h2>
-            <div id="content-accordion-<?php echo $x?>" class="accordion-collapse collapse" data-bs-parent="#faqlist">
-                <p class="accordion-body">
-                <div class="col">&nbsp;&nbsp;<a class="btn btn-primary"href="addcriminal.php?value=<?php echo $rows['person_id']?>">Add</a></div>
-                <hr>
-            
-                 <div class="table-responsive">
-                    <table class="table table-striped table-sm">
-                        <thead>
-                            <tr>
-                            <th>#</th> 
-                            <th>Docket No.</th>    
-                            <th>Description</th>
-                                <th>year</th>
-                                <th><i></i>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php
-                 
-
-                 $id=$rows['person_id'];
-                 $query1="SELECT
-                 *
-             FROM
-                 docket where person_id ='$id' ORDER BY year ASC";
-                 $result1=mysqli_query($conn,$query1);
-                 
-                 $rows1=mysqli_num_rows($result1);
- 
-                  if ($rows1>0) {
-                   $x=1;
-                       while ($rows1=mysqli_fetch_array($result1)) { 
-                           $t=$rows1['docket_id'];
-                     ?>
-                  
-                            <tr>
-                            <td><?php echo $x;?></td>
-                                <td>CSZAR<?php echo $rows1['docket_id'];?></td>
-                                <td><?php echo $rows1['crime_type'];?></td>
-                                <td><?php echo $rows1['year'];?></td>
-                                <td>
-                                <p><a  href="editrec.php?value=<?php echo $rows1['docket_id']; ?>"><i class="fas fa-edit" style="font-size: 16px;color: blue;"></i></a>&nbsp;
-                                <form method="post" action="inc/deleterec.php" style="display:inline-block;" onsubmit="return confirm('Do you really want to delete the record?');">
-                                    <?php echo app_csrf_input(); ?>
-                                    <input type="hidden" name="docket_id" value="<?php echo $rows1['docket_id']; ?>">
-                                    <button type="submit" style="background:none;border:none;padding:0;"><i class="fas fa-trash" style="font-size: 13px;color: red;"></i></button>
-                                </form>
-                                </p>
-                                </td>              
-                            </tr>
-                            <?php
-
-                            $x++;
-                      }
-                    }
-                 
-                 ?>
-              
-                        </tbody>
-                    </table>
+<body class="app-shell hero-grid">
+    <div class="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
+        <aside class="glass-panel app-card w-full rounded-[2rem] p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:self-start">
+            <div class="flex items-center gap-4 border-b border-white/10 pb-5">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300">
+                    <i class="fa fa-folder-open text-xl"></i>
                 </div>
-                 
-                 
-                 
-
-                </p>
+                <div>
+                    <div class="app-kicker">Admin console</div>
+                    <h1 class="mt-1 text-xl font-bold text-white">Case records</h1>
+                </div>
             </div>
-        </div>
-        <?php
-                                       
-              $x++;    
-                }
-              }else{
-                ?>
-                <h3 style="text-align:center;color: rgb(75,2,59);font-size:14px">No record(s)</h3>
-                <?php
-              } ?>
-                       
-        
 
+            <nav class="mt-6 space-y-2">
+                <a class="app-sidebar-link" href="dashboard.php"><i class="fas fa-tachometer-alt w-5"></i><span>Dashboard</span></a>
+                <a class="app-sidebar-link" href="face_backfill.php"><i class="fa fa-database w-5"></i><span>Face Cache Backfill</span></a>
+                <a class="app-sidebar-link" href="people.php"><i class="fa fa-users w-5"></i><span>Citizens</span></a>
+                <a class="app-sidebar-link" href="non_citi.php"><i class="fa fa-globe w-5"></i><span>Non Citizens</span></a>
+                <a class="app-sidebar-link" href="police.php"><i class="fa fa-user-secret w-5"></i><span>Police</span></a>
+                <a class="app-sidebar-link is-active" href="criminal.php"><i class="fa fa-folder-open w-5"></i><span>Cases</span></a>
+                <a class="app-sidebar-link" href="report.php"><i class="fa fa-line-chart w-5"></i><span>Reports</span></a>
+                <a class="app-sidebar-link" href="inc/logout.php"><i class="fa fa-power-off w-5"></i><span>Logout</span></a>
+            </nav>
 
-                      
-       
-    </div>
-</div>
-			
+            <div class="mt-8 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4">
+                <div class="app-badge app-badge-info">Session</div>
+                <p class="mt-3 text-lg font-semibold text-white"><?php echo htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p class="mt-1 text-sm text-slate-400"><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
-            <footer class="bg-white sticky-footer">
-                <div class="container my-auto"></div>
-            </footer>
-        </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>
-    </div>
-    <script src="../assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="../assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="../assets/js/theme.js"></script>
+        </aside>
 
- 
+        <main class="flex-1 space-y-6">
+            <section class="glass-panel-strong app-card rounded-[2rem] p-6 md:p-8">
+                <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                        <div class="app-kicker">Case overview</div>
+                        <h2 class="mt-3 text-4xl font-extrabold text-white">Criminal records</h2>
+                        <p class="mt-4 max-w-3xl text-base leading-7 text-slate-300">Browse dockets by person, add new cases, and manage existing records from a cleaner operations surface.</p>
+                    </div>
+                    <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/40 px-5 py-4 text-sm text-slate-300">
+                        <div class="font-semibold text-white">Operational note</div>
+                        <p class="mt-2 max-w-sm leading-6">Each person section keeps add, edit, and delete actions available while making case history easier to scan.</p>
+                    </div>
+                </div>
+            </section>
+
+            <?php if ($flashMessage !== null) { ?>
+                <div><?php echo app_render_flash_banner($flashMessage); ?></div>
+            <?php } ?>
+
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $peopleCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">People in registry</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $peopleWithCases, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">People with dockets</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $totalDockets, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Total dockets</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $peopleWithoutCases, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Without case history</div>
+                </div>
+            </section>
+
+            <section class="space-y-4">
+                <?php if ($peopleCount === 0): ?>
+                    <div class="glass-panel app-card rounded-[2rem] p-8 text-center text-slate-300">No people records are available yet.</div>
+                <?php else: ?>
+                    <?php foreach ($records as $index => $record): ?>
+                        <?php
+                        $docketCount = count($record['dockets']);
+                        $docketBadgeClass = $docketCount > 0 ? 'app-badge-warn' : 'app-badge-info';
+                        $docketBadgeText = $docketCount > 0 ? $docketCount . ' docket(s)' : 'No dockets';
+                        ?>
+                        <section class="glass-panel app-card rounded-[2rem] p-6">
+                            <div class="flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <div class="app-kicker">Person <?php echo htmlspecialchars((string) ($index + 1), ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <h3 class="mt-2 text-2xl font-bold text-white"><?php echo htmlspecialchars($record['full_name'] !== '' ? $record['full_name'] : 'Unknown person', ENT_QUOTES, 'UTF-8'); ?></h3>
+                                    <p class="mt-2 text-sm text-slate-400">ID Number: <?php echo htmlspecialchars($record['id_number'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                </div>
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <span class="app-badge <?php echo $docketBadgeClass; ?>"><?php echo htmlspecialchars($docketBadgeText, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <a class="app-button app-button-primary" href="addcriminal.php?value=<?php echo htmlspecialchars((string) $record['person_id'], ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-plus"></i>Add case</a>
+                                </div>
+                            </div>
+
+                            <?php if ($docketCount === 0): ?>
+                                <div class="mt-5 rounded-[1.5rem] border border-white/10 bg-slate-950/40 px-5 py-6 text-sm text-slate-300">No dockets recorded for this person yet.</div>
+                            <?php else: ?>
+                                <div class="mt-5 overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-white/10 text-left text-sm text-slate-300">
+                                        <thead>
+                                            <tr class="text-xs uppercase tracking-[0.18em] text-slate-400">
+                                                <th class="px-4 py-3 font-semibold">#</th>
+                                                <th class="px-4 py-3 font-semibold">Docket No.</th>
+                                                <th class="px-4 py-3 font-semibold">Description</th>
+                                                <th class="px-4 py-3 font-semibold">Year</th>
+                                                <th class="px-4 py-3 font-semibold">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-white/5">
+                                            <?php foreach ($record['dockets'] as $docketIndex => $docket): ?>
+                                                <tr class="transition hover:bg-white/5">
+                                                    <td class="px-4 py-4 text-slate-400"><?php echo htmlspecialchars((string) ($docketIndex + 1), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="px-4 py-4 font-medium text-slate-200">CSZAR<?php echo htmlspecialchars((string) $docket['docket_id'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="px-4 py-4"><?php echo htmlspecialchars($docket['crime_type'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="px-4 py-4"><?php echo htmlspecialchars($docket['year'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="px-4 py-4">
+                                                        <div class="flex items-center gap-3">
+                                                            <a class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/10 text-sky-200 transition hover:bg-sky-400/20" href="editrec.php?value=<?php echo htmlspecialchars((string) $docket['docket_id'], ENT_QUOTES, 'UTF-8'); ?>" title="Edit docket">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                            <form method="post" action="inc/deleterec.php" onsubmit="return confirm('Do you really want to delete the record?');">
+                                                                <?php echo app_csrf_input(); ?>
+                                                                <input type="hidden" name="docket_id" value="<?php echo htmlspecialchars((string) $docket['docket_id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                                <button class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-400/20 bg-rose-400/10 text-rose-200 transition hover:bg-rose-400/20" type="submit" title="Delete docket">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        </section>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </section>
+        </main>
+    </div>
 </body>
 </html>

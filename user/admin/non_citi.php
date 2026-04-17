@@ -1,185 +1,238 @@
-<?php include 'inc/session.php';?>
-<?php $flashMessage = app_get_flash_message(); ?>
+<?php include 'inc/session.php'; ?>
+<?php include 'inc/connect.php'; ?>
+<?php
+$flashMessage = app_get_flash_message();
 
+$adminName = 'Administrator';
+$adminStatement = mysqli_prepare($conn, 'SELECT firstname, lastname FROM admin WHERE admin_id = ? LIMIT 1');
+if ($adminStatement) {
+    mysqli_stmt_bind_param($adminStatement, 'i', $id);
+    mysqli_stmt_execute($adminStatement);
+    $adminResult = mysqli_stmt_get_result($adminStatement);
+    $adminRow = mysqli_fetch_assoc($adminResult);
+    mysqli_stmt_close($adminStatement);
+
+    if ($adminRow) {
+        $adminName = trim($adminRow['firstname'] . ' ' . $adminRow['lastname']);
+    }
+}
+
+$people = [];
+$query = "SELECT * FROM person WHERE country != 'South Africa' ORDER BY person_id DESC";
+$result = mysqli_query($conn, $query);
+
+$confirmedCount = 0;
+$countryCounts = [];
+
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $isConfirmed = (string) $row['confirmed_acc'] === '1';
+        $country = trim((string) $row['country']);
+
+        if ($isConfirmed) {
+            $confirmedCount += 1;
+        }
+
+        if ($country !== '') {
+            if (!isset($countryCounts[$country])) {
+                $countryCounts[$country] = 0;
+            }
+
+            $countryCounts[$country] += 1;
+        }
+
+        $people[] = [
+            'person_id' => (int) $row['person_id'],
+            'full_name' => trim($row['firstname'] . ' ' . $row['lastname']),
+            'id_number' => (string) $row['id_number'],
+            'gender' => (string) $row['gender'],
+            'phone' => (string) $row['phone'],
+            'email' => (string) $row['email'],
+            'country' => $country,
+            'confirmed' => $isConfirmed,
+        ];
+    }
+}
+
+$nonCitizenCount = count($people);
+$pendingCount = $nonCitizenCount - $confirmedCount;
+$distinctCountries = count($countryCounts);
+?>
 <!DOCTYPE html>
-<html style="font-family: Nunito, sans-serif;">
-<?php include'inc/connect.php'; ?>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System |Non citizen People</title><link rel="icon" href="assets/img/logo.png">
-    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee&amp;display=swap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Non Citizens</title>
+    <link rel="icon" href="assets/img/logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="../assets/fonts/font-awesome.min.css">
     <link rel="stylesheet" href="../assets/fonts/fontawesome5-overrides.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="../../assets/css/tailwind-ui.css">
 </head>
-
-<body id="page-top" >
-    <?php echo app_render_alert($flashMessage); ?>
-    <div id="wrapper">
-        <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
-            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#"><i class="fa fa-eye"></i>
-                    <div class="sidebar-brand-icon rotate-n-15"></div>
-                    <div class="sidebar-brand-text mx-3"><span>is system</span></div>
-                </a>
-                <hr class="sidebar-divider my-0">
-                <?php include'inc/toggle.php';?>
-                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
-            </div>
-        </nav>
-        <div class="d-flex flex-column" id="content-wrapper">
-
-
-
-
-            <div id="content">
-                <nav class="navbar navbar-light navbar-expand bg-white shadow mb-4 topbar static-top">
-                    <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
-                        <ul class="navbar-nav flex-nowrap ms-auto">
-                            <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
-                                <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
-                                    <form class="me-auto navbar-search w-100">
-                                        <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ...">
-                                            <div class="input-group-append"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </li>
-                            <div class="d-none d-sm-block topbar-divider"></div>
-                            <li class="nav-item dropdown no-arrow">
-                                <!--acc-->    
-                            <?php include'inc/nav.php';?>
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-                <div class="container-fluid">
-          
-                    <div class="card shadow">
-                        <div class="card-header py-3">
-                            <p class="text-primary m-0 fw-bold">People&nbsp;(Non Citizen)</p>
-                        </div>
-                        <div class="card-body" style="font-size: 12px;">
-                            <div class="table-responsive table mb-0 pt-3 pe-2">
-                                <table class="table table-sm my-0 mydatatable">
-                                        <thead>
-                                            <tr>
-                                            <th>No.</th>
-                                                <th>Name & Surname</th>
-                                                <th>Id Number</th>
-                                                <th>Gender</th>
-                                          
-                                                <th>Phone</th>
-                                                <th>Email</th>
-                                                
-                                                <th>Account status</th>
-                                                <th><i class="fa fa-cogs"></i>&nbsp;Account </th>
-                                                
-												<th><i class="fa fa-cogs"></i>&nbsp;Action</th>
-                                              
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                        <?PHP
-              $query="SELECT * from person where country !='South Africa'";
-              $result=mysqli_query($conn,$query);
-              
-              $rows=mysqli_num_rows($result); 
-              if ($rows>0) {
-                  $x=1;
-                while ($rows=mysqli_fetch_array($result)) {    
-              ?> 
-
-              <?php 
-              
-              if($rows['confirmed_acc'] == '1')
-              {
-                  $delivered='<span style="background: #17e305;color: rgb(255,255,255);border-radius: 6px;padding-right: 3px;padding-left: 3px;padding-bottom: 2px;padding-top: -1px;">Confirmed</span>';
-
-              }else
-              {
-
-                $delivered='<span style="background: red;color: rgb(255,255,255);border-radius: 6px;padding-right: 3px;padding-left: 3px;padding-bottom: 2px;padding-top: -1px;">not confirmed</span>';
-              }
-
-              
-              ?>
-                                            <tr>
-                                                <td><?php echo $x;?> </td>
-                                                <td><?php echo $rows['firstname'].' '.$rows['lastname'];?></td>
-                                                <td><?php echo $rows['id_number'];?></td>
-                                                <td><?php echo $rows['gender'];?></td>
-                                    
-                                                <td><?php echo $rows['phone'];?></td>
-                                                <td><?php echo $rows['email'];?></td>
-                                               
-                                                <td><?php echo $delivered;?></td>
-                                                <td>
-                                                <form method="post" action="confirm.php" style="display:inline-block;margin-right:4px;">
-                                                    <?php echo app_csrf_input(); ?>
-                                                    <input type="hidden" name="person_id" value="<?php echo $rows['person_id']; ?>">
-                                                    <button type="submit" style="border-radius: 0px;background: rgb(247,249,252);border-style: none;color: rgb(80,94,108);">Confirm</button>
-                                                </form>
-                                                <form method="post" action="notconfirm.php" style="display:inline-block;">
-                                                    <?php echo app_csrf_input(); ?>
-                                                    <input type="hidden" name="person_id" value="<?php echo $rows['person_id']; ?>">
-                                                    <button type="submit" style="border-radius: 0px;background: rgb(247,249,252);border-style: none;color: rgb(80,94,108);">Unconfirm</button>
-                                                </form>
-                                                </td>
-												 <td>
-                                                <p><a href="viewnoncity.php?value=<?php echo $rows['person_id']; ?>"><i class="fas fa-eye" style="font-size: 16px;color: blue;"></i></a>
-                                                <form method="post" action="inc/del.php" style="display:inline-block;" onsubmit="return confirm('Do you really want to delete the record?');">
-                                                    <?php echo app_csrf_input(); ?>
-                                                    <input type="hidden" name="person_id" value="<?php echo $rows['person_id']; ?>">
-                                                    <button type="submit" style="background:none;border:none;padding:0;"><i class="fas fa-trash" style="font-size: 13px;color: red;"></i></button>
-                                                </form>
-                                            </p>
-                                            </td>
-                                          
-                                            </tr>
-                                            <?php
-                                            $x++;
-                  
-                }
-                ?>
-                                        </tbody>
-                                        <?php
-              }else{
-                ?>
-                <h3 style="text-align:center;color: rgb(75,2,59);font-size:14px">No record(s)</h3>
-                <?php
-              } ?>
-                                    </table>
-                            </div>
-                        </div>
-                        <div class="card-body"></div>
-                    </div>
-					
+<body class="app-shell hero-grid">
+    <div class="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
+        <aside class="glass-panel app-card w-full rounded-[2rem] p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:self-start">
+            <div class="flex items-center gap-4 border-b border-white/10 pb-5">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300">
+                    <i class="fa fa-globe text-xl"></i>
                 </div>
-			
+                <div>
+                    <div class="app-kicker">Admin console</div>
+                    <h1 class="mt-1 text-xl font-bold text-white">Non-citizen records</h1>
+                </div>
             </div>
-            <footer class="bg-white sticky-footer">
-                <div class="container my-auto"></div>
-            </footer>
-        </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>
-    </div>
-    <script src="../assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="../assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="../assets/js/theme.js"></script>
-</body>
 
+            <nav class="mt-6 space-y-2">
+                <a class="app-sidebar-link" href="dashboard.php"><i class="fas fa-tachometer-alt w-5"></i><span>Dashboard</span></a>
+                <a class="app-sidebar-link" href="face_backfill.php"><i class="fa fa-database w-5"></i><span>Face Cache Backfill</span></a>
+                <a class="app-sidebar-link" href="people.php"><i class="fa fa-users w-5"></i><span>Citizens</span></a>
+                <a class="app-sidebar-link is-active" href="non_citi.php"><i class="fa fa-globe w-5"></i><span>Non Citizens</span></a>
+                <a class="app-sidebar-link" href="police.php"><i class="fa fa-user-secret w-5"></i><span>Police</span></a>
+                <a class="app-sidebar-link" href="criminal.php"><i class="fa fa-folder-open w-5"></i><span>Cases</span></a>
+                <a class="app-sidebar-link" href="report.php"><i class="fa fa-line-chart w-5"></i><span>Reports</span></a>
+                <a class="app-sidebar-link" href="inc/logout.php"><i class="fa fa-power-off w-5"></i><span>Logout</span></a>
+            </nav>
+
+            <div class="mt-8 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4">
+                <div class="app-badge app-badge-info">Session</div>
+                <p class="mt-3 text-lg font-semibold text-white"><?php echo htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p class="mt-1 text-sm text-slate-400"><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></p>
+            </div>
+        </aside>
+
+        <main class="flex-1 space-y-6">
+            <section class="glass-panel-strong app-card rounded-[2rem] p-6 md:p-8">
+                <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                        <div class="app-kicker">Registry overview</div>
+                        <h2 class="mt-3 text-4xl font-extrabold text-white">Non-citizen people records</h2>
+                        <p class="mt-4 max-w-3xl text-base leading-7 text-slate-300">Review international person records, confirm account access, and open detailed non-citizen profiles from the same modern admin workspace.</p>
+                    </div>
+                    <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/40 px-5 py-4 text-sm text-slate-300">
+                        <div class="font-semibold text-white">Operational note</div>
+                        <p class="mt-2 max-w-sm leading-6">Confirmation and deletion actions remain post-only and continue using CSRF-protected forms.</p>
+                    </div>
+                </div>
+            </section>
+
+            <?php if ($flashMessage !== null) { ?>
+                <div><?php echo app_render_flash_banner($flashMessage); ?></div>
+            <?php } ?>
+
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $nonCitizenCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Non-citizen records</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $confirmedCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Confirmed accounts</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $pendingCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Pending accounts</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars((string) $distinctCountries, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Countries represented</div>
+                </div>
+            </section>
+
+            <section class="glass-panel app-card rounded-[2rem] p-6">
+                <div class="flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <div class="app-kicker">Non-citizen table</div>
+                        <h3 class="mt-2 text-2xl font-bold text-white">Manage people records</h3>
+                    </div>
+                    <div class="text-sm text-slate-400">Showing <?php echo htmlspecialchars((string) $nonCitizenCount, ENT_QUOTES, 'UTF-8'); ?> registered records outside South Africa.</div>
+                </div>
+
+                <?php if ($nonCitizenCount === 0) { ?>
+                    <div class="mt-6 rounded-[1.5rem] border border-white/10 bg-slate-950/40 px-5 py-8 text-center text-slate-300">No non-citizen records are available yet.</div>
+                <?php } else { ?>
+                    <div class="mt-6 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-white/10 text-left text-sm text-slate-300">
+                            <thead>
+                                <tr class="text-xs uppercase tracking-[0.18em] text-slate-400">
+                                    <th class="px-4 py-3 font-semibold">No.</th>
+                                    <th class="px-4 py-3 font-semibold">Name</th>
+                                    <th class="px-4 py-3 font-semibold">ID Number</th>
+                                    <th class="px-4 py-3 font-semibold">Gender</th>
+                                    <th class="px-4 py-3 font-semibold">Country</th>
+                                    <th class="px-4 py-3 font-semibold">Phone</th>
+                                    <th class="px-4 py-3 font-semibold">Email</th>
+                                    <th class="px-4 py-3 font-semibold">Account</th>
+                                    <th class="px-4 py-3 font-semibold">Confirmation</th>
+                                    <th class="px-4 py-3 font-semibold">Record</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                <?php foreach ($people as $index => $person) { ?>
+                                    <tr class="align-top transition hover:bg-white/5">
+                                        <td class="px-4 py-4 text-slate-400"><?php echo htmlspecialchars((string) ($index + 1), ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4">
+                                            <div class="font-semibold text-white"><?php echo htmlspecialchars($person['full_name'] !== '' ? $person['full_name'] : 'Unknown person', ENT_QUOTES, 'UTF-8'); ?></div>
+                                        </td>
+                                        <td class="px-4 py-4 font-medium text-slate-200"><?php echo htmlspecialchars($person['id_number'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4"><?php echo htmlspecialchars($person['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4"><?php echo htmlspecialchars($person['country'] !== '' ? $person['country'] : 'Unknown', ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4"><?php echo htmlspecialchars($person['phone'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4"><?php echo htmlspecialchars($person['email'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-4">
+                                            <span class="app-badge <?php echo $person['confirmed'] ? 'app-badge-success' : 'app-badge-warn'; ?>"><?php echo $person['confirmed'] ? 'Confirmed' : 'Pending'; ?></span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="flex flex-wrap gap-2">
+                                                <form method="post" action="confirm.php">
+                                                    <?php echo app_csrf_input(); ?>
+                                                    <input type="hidden" name="person_id" value="<?php echo htmlspecialchars((string) $person['person_id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button class="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:bg-sky-400/20" type="submit">Confirm</button>
+                                                </form>
+                                                <form method="post" action="notconfirm.php">
+                                                    <?php echo app_csrf_input(); ?>
+                                                    <input type="hidden" name="person_id" value="<?php echo htmlspecialchars((string) $person['person_id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button class="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/20" type="submit">Unconfirm</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <a class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/10 text-sky-200 transition hover:bg-sky-400/20" href="viewnoncity.php?value=<?php echo htmlspecialchars((string) $person['person_id'], ENT_QUOTES, 'UTF-8'); ?>" title="View record">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <form method="post" action="inc/del.php" onsubmit="return confirm('Do you really want to delete the record?');">
+                                                    <?php echo app_csrf_input(); ?>
+                                                    <input type="hidden" name="person_id" value="<?php echo htmlspecialchars((string) $person['person_id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-400/20 bg-rose-400/10 text-rose-200 transition hover:bg-rose-400/20" type="submit" title="Delete record">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php } ?>
+            </section>
+        </main>
+    </div>
+</body>
 </html>
