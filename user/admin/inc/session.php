@@ -1,21 +1,14 @@
 <?php
-    include 'inc/connect.php';
- 
-    // Check connection
-    if (mysqli_connect_errno())
-      {
-      echo "Failed to connect to MySQL: " . mysqli_connect_error();
-      }
-     
-      if(!isset($_SESSION)) 
-      { 
-          session_start(); 
-          $email=$_SESSION['email'];
-          $id=$_SESSION['admin_id'];
-         
-      
-      }
+include 'inc/connect.php';
+require_once __DIR__ . '/../../../src/auth.php';
 
+app_start_session();
 
+if (empty($_SESSION['email']) || empty($_SESSION['admin_id'])) {
+  $loginPath = basename(dirname($_SERVER['SCRIPT_NAME'])) === 'inc' ? '../index.php' : 'index.php';
+  app_redirect($loginPath, 'Please login to continue.');
+}
 
-    ?>
+$email = $_SESSION['email'];
+$id = $_SESSION['admin_id'];
+?>

@@ -1,569 +1,443 @@
+<?php
+include '../src/connect.php';
+require_once '../src/auth.php';
+
+function register_field_has_valid_name($value)
+{
+  return (bool) preg_match("/^[A-Za-z][A-Za-z '\-]{1,99}$/", $value);
+}
+
+function register_field_has_valid_phone($value)
+{
+  return (bool) preg_match('/^\d{10}$/', $value);
+}
+
+function register_field_has_valid_zipcode($value)
+{
+  return (bool) preg_match('/^[A-Za-z0-9 -]{3,12}$/', $value);
+}
+
+function register_field_has_strong_password($value)
+{
+  return (bool) preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', $value);
+}
+
+$flashMessage = app_get_flash_message();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
+  $name = trim((string) ($_POST['name'] ?? ''));
+  $surname = trim((string) ($_POST['surname'] ?? ''));
+  $gender = trim((string) ($_POST['gender'] ?? ''));
+  $year = trim((string) ($_POST['dob'] ?? ''));
+  $dob = trim((string) ($_POST['dob1'] ?? ''));
+  $idno = trim((string) ($_POST['idno'] ?? ''));
+  $cellno = trim((string) ($_POST['cellno'] ?? ''));
+  $keenfirstname = trim((string) ($_POST['keenfirstname'] ?? ''));
+  $keenlastname = trim((string) ($_POST['keenlastname'] ?? ''));
+  $kphone = trim((string) ($_POST['kphone'] ?? ''));
+  $kemail = app_normalize_email($_POST['kemail'] ?? '');
+  $houseno = trim((string) ($_POST['houseno'] ?? ''));
+  $streetname = trim((string) ($_POST['streetname'] ?? ''));
+  $suburb = trim((string) ($_POST['suburb'] ?? ''));
+  $city = trim((string) ($_POST['city'] ?? ''));
+  $province = trim((string) ($_POST['province'] ?? ''));
+  $zipcode = trim((string) ($_POST['zipcode'] ?? ''));
+  $country = trim((string) ($_POST['country'] ?? ''));
+  $checkcountry = trim((string) ($_POST['selector'] ?? ''));
+  $email = app_normalize_email($_POST['email'] ?? '');
+  $password = (string) ($_POST['password'] ?? '');
+  $confirmPassword = (string) ($_POST['Cpassword'] ?? '');
+  $fullid = $dob . $idno;
+
+  if (
+    $name === '' ||
+    $surname === '' ||
+    $gender === '' ||
+    $year === '' ||
+    $dob === '' ||
+    $idno === '' ||
+    $cellno === '' ||
+    $keenfirstname === '' ||
+    $keenlastname === '' ||
+    $kphone === '' ||
+    $kemail === '' ||
+    $houseno === '' ||
+    $streetname === '' ||
+    $suburb === '' ||
+    $city === '' ||
+    $province === '' ||
+    $zipcode === '' ||
+    $checkcountry === '' ||
+    $email === '' ||
+    $password === '' ||
+    $confirmPassword === ''
+  ) {
+    app_redirect('register.php', 'Please complete the required registration fields.');
+  }
+
+  if (!register_field_has_valid_name($name) || !register_field_has_valid_name($surname)) {
+    app_redirect('register.php', 'Please enter a valid first and last name.');
+  }
+
+  if (!in_array($gender, ['Male', 'Female'], true)) {
+    app_redirect('register.php', 'Please choose a valid gender option.');
+  }
+
+  $dateOfBirth = DateTime::createFromFormat('Y-m-d', $year);
+  if (!$dateOfBirth || $dateOfBirth->format('Y-m-d') !== $year || $dateOfBirth > new DateTime('today')) {
+    app_redirect('register.php', 'Please enter a valid date of birth.');
+  }
+
+  if (!preg_match('/^\d{6}$/', $dob) || !preg_match('/^\d{7}$/', $idno) || !preg_match('/^\d{13}$/', $fullid)) {
+    app_redirect('register.php', 'Please enter a valid ID number.');
+  }
+
+  if (!register_field_has_valid_phone($cellno) || !register_field_has_valid_phone($kphone)) {
+    app_redirect('register.php', 'Please enter valid 10-digit phone numbers.');
+  }
+
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !filter_var($kemail, FILTER_VALIDATE_EMAIL)) {
+    app_redirect('register.php', 'Please enter valid email addresses.');
+  }
+
+  if ($checkcountry !== 'other' && $checkcountry !== 'South Africa') {
+    app_redirect('register.php', 'Please choose a valid country option.');
+  }
+
+  if ($checkcountry === 'other' && $country === '') {
+    app_redirect('register.php', 'Please provide the country name.');
+  }
+
+  if (!register_field_has_valid_name($keenfirstname) || !register_field_has_valid_name($keenlastname)) {
+    app_redirect('register.php', 'Please enter valid next of kin names.');
+  }
+
+  if (!register_field_has_valid_zipcode($zipcode)) {
+    app_redirect('register.php', 'Please enter a valid zip code.');
+  }
+
+  if (!register_field_has_strong_password($password)) {
+    app_redirect('register.php', 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.');
+  }
+
+  if (!hash_equals($password, $confirmPassword)) {
+    app_redirect('register.php', 'Password confirmation does not match.');
+  }
+
+  $countryValue = $checkcountry === 'other' ? $country : 'South Africa';
+  $passwordHash = app_hash_password($password);
+
+  $checkStatement = mysqli_prepare($conn, 'SELECT person_id FROM person WHERE email = ? OR id_number = ? LIMIT 1');
+  mysqli_stmt_bind_param($checkStatement, 'ss', $email, $fullid);
+  mysqli_stmt_execute($checkStatement);
+  $existing = mysqli_fetch_assoc(mysqli_stmt_get_result($checkStatement));
+  mysqli_stmt_close($checkStatement);
+
+  if ($existing) {
+    app_redirect('register.php', 'An account with that email or ID number already exists. Please login instead.');
+  }
+
+  $insertStatement = mysqli_prepare(
+    $conn,
+    'INSERT INTO person(firstname, lastname, gender, dateOfbirth, id_number, phone, house_no, street_name, suburb, city, province, zip_code, country, keen_firstname, keen_lastname, keen_email, keen_phone, email, employee_type, password, confirmed_acc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+  $employeeType = 'default';
+  $confirmed = '0';
+  mysqli_stmt_bind_param(
+    $insertStatement,
+    'sssssssssssssssssssss',
+    $name,
+    $surname,
+    $gender,
+    $year,
+    $fullid,
+    $cellno,
+    $houseno,
+    $streetname,
+    $suburb,
+    $city,
+    $province,
+    $zipcode,
+    $countryValue,
+    $keenfirstname,
+    $keenlastname,
+    $kemail,
+    $kphone,
+    $email,
+    $employeeType,
+    $passwordHash,
+    $confirmed
+  );
+  $inserted = mysqli_stmt_execute($insertStatement);
+  mysqli_stmt_close($insertStatement);
+
+  if (!$inserted) {
+    app_redirect('register.php', 'Account could not be created. Please try again.');
+  }
+
+  app_redirect('login.php', 'Account successfully created.');
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-<?php
-
- //connection
- include '../src/connect.php';  
-
-if(isset($_POST['name']))
-{
- 
-//variables
-    $name=$_POST['name'];
-    $surname=$_POST['surname']; 
-    $gender=$_POST['gender'];
-    $year=$_POST['dob'];
-    $dob=$_POST['dob1'];
-    $idno=$_POST['idno'];
-   
-  
-    $cellno=$_POST['cellno'];
-//nextkeen
-    $keenfirstname=$_POST['keenfirstname'];
-    $keenlastname=$_POST['keenlastname'];
-    $kphone=$_POST['kphone'];
-    $kemail=$_POST['kemail'];
-   //address 
-    $houseno=$_POST['houseno'];
-    $streetname=$_POST['streetname'];
-    $suburb=$_POST['suburb'];
-    $city=$_POST['city'];
-    $province=$_POST['province'];
-    $zipcode=$_POST['zipcode'];
-
-    $country=$_POST['country'];
-      $checkcountry=$_POST['selector'];
-
-    //account
-
-      $email=$_POST['email'];
-      $password=md5($_POST['password']);
-    //hash up password
-  
-    
-    //concat idnumber
-    $fullid=$dob.''.$idno;
-    
-    $query="select * from person where email='$email' and id_number='$fullid'";
-    
-    $result=mysqli_query($conn,$query) or die(mysqli_error($conn));
-    
-    $row=mysqli_fetch_array($result);
-
-
-
-    
-    if($row !== NULL && $row['email']==$email && $row['id_number']==$fullid)
-    {
-    
-        echo'<script>alert("Email and the Id Number exist within the system,Please login.");window.location = "register.php";</script>';
-   
-     exit;
-    
-    }                         
-    else{
-    
-      
-   if($checkcountry=='other')
-   {
-
-    $sql="INSERT INTO person(firstname, lastname, gender, dateOfbirth, id_number, phone, house_no, street_name, suburb, city, province, zip_code, country, keen_firstname, keen_lastname, keen_email, keen_phone, email, employee_type, password, confirmed_acc) 
-    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','$country','$keenfirstname','$keenlastname','$kemail','$kphone','$email','default','$password','0')";
-
-
-
-            
-
-    if(mysqli_query($conn,$sql))
-    {
-      
-        echo'<script>alert("Account successfully created");window.location = "login.php";</script>';
-        exit;
- 
-                                                 
-  }
-  else{
-    
-   die("<h3>unsuccessfully not registered </h3>".mysqli_error($conn));
- 
- }
-
-
-
-   }else{
-
-
-    $sql="INSERT INTO person(firstname, lastname, gender, dateOfbirth, id_number, phone, house_no, street_name, suburb, city, province, zip_code, country, keen_firstname, keen_lastname, keen_email, keen_phone, email, employee_type, password, confirmed_acc) 
-    VALUES ('$name','$surname','$gender','$year','$fullid','$cellno','$houseno','$streetname','$suburb','$city','$province','$zipcode','South Africa','$keenfirstname','$keenlastname','$kemail','$kphone','$email','default','$password','0')";
-
-
-
-            
-
-    if(mysqli_query($conn,$sql))
-    {
-      
-        echo'<script>alert("Account successfully created");window.location = "login.php";</script>';
-        exit;
- 
-                                                 
-  }
-  else{
-    
-   die("<h3>unsuccessfully not registered </h3>".mysqli_error($conn));
- 
- }
-
-
-
-
-   }
-           }
-
-
-
-}
-
-   
-   
-?>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System | Register</title><link rel="icon" href="../assets/img/logo.jpg">
-    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Muli">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Register</title>
+    <link rel="icon" href="../assets/img/logo.jpg">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
-    <link rel="stylesheet" href="assets/fonts/fontawesome5-overrides.min.css">
-    <link rel="stylesheet" href="assets/css/alert.css">
-    <link rel="stylesheet" href="assets/css/Bootstrap-4---Profile-Creation-Wizard.css">
-    <link rel="stylesheet" href="assets/css/Contact-Form-Clean.css">
-    <link rel="stylesheet" href="assets/css/Customizable-Background--Overlay.css">
-    <link rel="stylesheet" href="assets/css/Footer-Basic.css">
-    <link rel="stylesheet" href="assets/css/FPE-Gentella-form-elements-1.css">
-    <link rel="stylesheet" href="assets/css/FPE-Gentella-form-elements.css">
-    <link rel="stylesheet" href="assets/css/Google-Style-Login.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="assets/css/index-top-info-1.css">
-    <link rel="stylesheet" href="assets/css/index-top-info.css">
-    <link rel="stylesheet" href="assets/css/LinkedIn-like-Profile-Box.css">
-    <link rel="stylesheet" href="assets/css/Multi-step-form.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple-1.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple.css">
-    <link rel="stylesheet" href="assets/css/Navigation-Clean.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
-    <link rel="stylesheet" href="assets/css/Profile-Card.css">
-    <link rel="stylesheet" href="assets/css/Profile-with-data-and-skills.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="stylesheet" href="assets/css/Video-Responsive.css">
+    <link rel="stylesheet" href="../assets/css/tailwind-ui.css">
 </head>
-<style>
-
-.register-photo {
-  background: #f1f7fc;
-  padding: 80px 0;
-}
-
-.register-photo .image-holder {
-  display: table-cell;
-  width: auto;
-  background: url(../../assets/img/meeting.jpg);
-  background-size: cover;
-}
-
-.register-photo .form-container {
-  display: table;
-  max-width: 900px;
-  width: 90%;
-  margin: 0 auto;
-  box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
-}
-
-.register-photo form {
-  display: table-cell;
-  width: 400px;
-  background-color: #ffffff;
-  padding: 40px 60px;
-  color: #505e6c;
-}
-
-@media (max-width:991px) {
-  .register-photo form {
-    padding: 40px;
-  }
-}
-
-.register-photo form h2 {
-  font-size: 24px;
-  line-height: 1.5;
-  margin-bottom: 30px;
-}
-
-.register-photo form .form-control {
-  background: #f7f9fc;
-  border: none;
-  border-bottom: 1px solid #dfe7f1;
-  border-radius: 0;
-  box-shadow: none;
-  outline: none;
-  color: inherit;
-  text-indent: 6px;
-  height: 40px;
-}
-
-.register-photo form .form-check {
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.register-photo form .btn-primary {
-  background: #f4476b;
-  border: none;
-  border-radius: 4px;
-  padding: 11px;
-  box-shadow: none;
-  margin-top: 35px;
-  text-shadow: none;
-  outline: none !important;
-}
-
-.register-photo form .btn-primary:hover, .register-photo form .btn-primary:active {
-  background: #eb3b60;
-}
-
-.register-photo form .btn-primary:active {
-  transform: translateY(1px);
-}
-
-.register-photo form .already {
-  display: block;
-  text-align: center;
-  font-size: 12px;
-  color: #6f7a85;
-  opacity: 0.9;
-  text-decoration: none;
-}.register-photo {
-  background: #f1f7fc;
-  padding: 80px 0;
-}
-
-.register-photo .image-holder {
-  display: table-cell;
-  width: auto;
-  background: url(../../assets/img/meeting.jpg);
-  background-size: cover;
-}
-
-.register-photo .form-container {
-  display: table;
-  max-width: 900px;
-  width: 90%;
-  margin: 0 auto;
-  box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
-}
-
-.register-photo form {
-  display: table-cell;
-  width: 400px;
-  background-color: #ffffff;
-  padding: 40px 60px;
-  color: #505e6c;
-}
-
-@media (max-width:991px) {
-  .register-photo form {
-    padding: 40px;
-  }
-}
-
-.register-photo form h2 {
-  font-size: 24px;
-  line-height: 1.5;
-  margin-bottom: 30px;
-}
-
-.register-photo form .form-control {
-  background: #f7f9fc;
-  border: none;
-  border-bottom: 1px solid #dfe7f1;
-  border-radius: 0;
-  box-shadow: none;
-  outline: none;
-  color: inherit;
-  text-indent: 6px;
-  height: 40px;
-}
-
-.register-photo form .form-check {
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.register-photo form .btn-primary {
-  background: #f4476b;
-  border: none;
-  border-radius: 4px;
-  padding: 11px;
-  box-shadow: none;
-  margin-top: 35px;
-  text-shadow: none;
-  outline: none !important;
-}
-
-.register-photo form .btn-primary:hover, .register-photo form .btn-primary:active {
-  background: #eb3b60;
-}
-
-.register-photo form .btn-primary:active {
-  transform: translateY(1px);
-}
-
-.register-photo form .already {
-  display: block;
-  text-align: center;
-  font-size: 12px;
-  color: #6f7a85;
-  opacity: 0.9;
-  text-decoration: none;
-}
-</style>
-
-<body  style="background: rgb(255,255,255);">
-    <div style="height: 500px;background: url(&quot;assets/img/Facial-recognition-technology-explained-compressed.jpg&quot;) center / cover no-repeat;">
-        <div class="d-flex justify-content-center align-items-center" style="height: inherit;min-height: initial;width: 100%;position: absolute;left: 0;background: rgba(30,41,99,0);">
-            <div class="d-flex align-items-center order-5" style="height:200px;">
-                <div class="container">
-                    <h1 class="text-center" style="color: rgb(242,245,248);font-size: 30px;font-weight: bold;"><i class="fa fa-bullseye" style="color: rgb(255,255,255);"></i><strong>&nbsp;IDENTIFICATION SYSTEM</strong><br></h1>
-                </div>
+<body class="app-shell hero-grid">
+    <main class="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+        <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <a class="brand-badge" href="../index.php">
+                    <i class="fa fa-chevron-left"></i>
+                    Back to home
+                </a>
+                <div class="app-kicker mt-6">Citizen onboarding</div>
+                <h1 class="mt-3 max-w-3xl text-4xl font-extrabold text-white md:text-5xl">Register into a modern identity workspace.</h1>
+                <p class="mt-4 max-w-3xl text-base leading-7 text-slate-300">Create a complete person record with personal data, address information, next-of-kin details, and account credentials in one guided form.</p>
+            </div>
+            <div class="glass-panel rounded-[1.75rem] p-5 lg:max-w-sm">
+                <div class="app-badge app-badge-info">Flow summary</div>
+                <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+                    <li>Personal identity details are captured first.</li>
+                    <li>Address and next-of-kin information complete the record.</li>
+                    <li>The account is created and awaits confirmation.</li>
+                </ul>
             </div>
         </div>
-    </div>
 
+        <div class="mb-6">
+            <?php echo app_render_flash_banner($flashMessage); ?>
+        </div>
 
-<!-- new form -->
-<section class="register-photo" style="background: rgb(255,255,255);">
-        <div class="form-container">
-<form action="" name="form" onsubmit="return validateForm();" method="post">
-                <p class="d-lg-flex justify-content-lg-center" style="color: rgb(44,32,252);"><img class="d-lg-flex justify-content-lg-center" src="assets/img/logo.png" style="height: 150px;"></p>
-                <h1 class="text-center" style="font-family: ABeeZee, sans-serif;font-size: 21px;">Register Account<a class="float-end" href="../index.php"><i class="fas fa-window-close" style="color: rgb(44,32,252);"></i></a></h1>
-                <hr>
-                <p style="color: rgb(44,32,252);">Personal information</p>
-                <div class="mb-3"><label class="form-label">Firs tname</label><input class="form-control" type="text" id="name" name="name"><span id="nerror"></span></div>
-                <div class="mb-3"><label class="form-label">Last name</label><input class="form-control" type="text"  name="surname" id="surname" ><span id="serror"></span></div>
-                <label class="form-label" style="color: var(--color-text-grey);">Date Of Birth</label>
-                <input class="form-control"type="date" name="dob"  id="dob" max="2005-12-31" min="1918-01-31"  placeholder="Id number"  style="font-size: 14px;"><span id="doberror"></span><br>
-               <label class="form-label" style="color: var(--color-text-grey);">Id number</label>
-               <div class="d-lg-flex justify-content-lg-start"></div>
-               <div class="input-group"><input class="form-control" type="text" maxlength="6" name="dob1" id="dob1" style="width: 137px;font-size: 14px;" placeholder="D.O.B" readonly="">
-               <input class="form-control" type="text" style="width: 130px;font-size: 14px;" id="idno" name="idno" maxlength="7" style="width: 130px;font-size: 14px;" placeholder="Complete Id"></div> <span id="iderror"></span><br>
-               <label class="form-label" style="color: rgb(136,132,132);">Gender</label>
-               <div class="form-check"><input class="form-check-input" type="radio" name="gender"   maxlength="13" id="gender" value="Male"><label class="form-check-label" for="formCheck-1" style="color: rgb(136,132,132);">Male</label></div>
-               <div class="form-check"><input class="form-check-input" type="radio" name="gender"   maxlength="13" id="gender" value="Female"><label class="form-check-label" for="formCheck-2" style="color: rgb(136,132,132);">Female</label></div>  <span id="gerror"></span><br>
-                <div class="mb-3"><label class="form-label">Phone number</label><input class="form-control" type="text" name="cellno" id="cellno"  ><span id="cerror"></span></div>
+        <form method="post" action="" class="glass-panel-strong app-card rounded-[2rem] p-6 md:p-8">
+            <div class="grid gap-6 xl:grid-cols-2">
+                <section class="app-form-section space-y-5">
+                    <div>
+                        <div class="app-kicker">Section 1</div>
+                        <h2 class="mt-2 text-2xl font-bold text-white">Personal information</h2>
+                    </div>
 
-              
-           
-                <p style="color: rgb(44,32,252);">Address information</p>
-                <hr>
-                                                                                               
-                <script>
-                function countrycheck(that) 
-                {
-                if (that.value == "other") 
-                {
-                document.getElementById("divcountry").style.display = "block";
-                document.getElementById("country").value="";
-                }
-                else
-                {
-                document.getElementById("divcountry").style.display = "none";
-                document.getElementById("country").value="South africa";
-              
-                }
-                }
-                </script>
-                <label style="color: var(--color-text-grey);" class="form-label">Country</label>
-                 <select id="selector" name="selector" onchange="countrycheck(this);"  class="form-control">
-                <option  value="">--Select Citizen--</option>
-                <option  value="South Africa">South african</option>
-                <option  value="other" id="chkcountry">Other</option>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="name">First name</label>
+                            <input class="app-input" type="text" id="name" name="name" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="surname">Last name</label>
+                            <input class="app-input" type="text" id="surname" name="surname" required>
+                        </div>
+                    </div>
 
-                </select><span id="citerror"></span>
-                <div class="mb-3"><label class="form-label">House No.</label><input class="form-control"   type="text" name="houseno" id="houseno" ><span id="keenhouse"></span></div>
-                <div class="mb-3"><label class="form-label">Street name</label><input class="form-control"  type="text" name="streetname" id="streetname" ><span id="keenstreet"></span></div>
-                <div class="mb-3"><label class="form-label">Suburb</label><input class="form-control"  type="text" name="suburb" id="suburb" ><span id="keensuburb"></span></div>
-                <div class="mb-3"><label class="form-label">City</label><input class="form-control"  type="text" name="city" id="city" ><span id="keencity"></span></div>
-                <div class="mb-3"><label class="form-label">Province</label><input class="form-control"  type="text" name="province" id="province" ><span id="keenprovince"></span></div>
-                <div class="mb-3"><label class="form-label">Zip Code</label><input class="form-control"  type="text" name="zipcode" id="zipcode" ><span id="keenzipcode"></span></div>
-               
-               
-               
-                <div id="divcountry" style="display: none">
-                <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Country</label><input class="form-control" type="text" name="country" id="country" ><span id="keencountry"></span></div>
-                                                                                              
-               </div> 
-                <p style="color: rgb(44,32,252);">Next of keen information</p>
-                <hr>
-              
-                <div class="mb-3"><label class="form-label">First name</label><input class="form-control" type="text" name="keenfirstname" id="keenfirstname" placeholder=""><span id="keenfname"></span></div>
-                <div class="mb-3"><label class="form-label">Last name</label><input class="form-control"  type="text" name="keenlastname" id="keenlastname" placeholder=""><span id="keenlname"></span></div>
-                <div class="mb-3"><label class="form-label">Phone number</label><input class="form-control"  type="text" name="kphone" id="kphone" placeholder=""><span id="keenphone"></span></div>
-                <div class="mb-3"><label class="form-label">Email</label><input class="form-control"  type="text" name="kemail" id="kemail" placeholder=""><span id="keenemail"></span></div>
-                <p style="color: rgb(44,32,252);">Account</p>
-                <hr>
-                <div class="mb-3"><label class="form-label">Email</label><input class="form-control" type="text" id="email"  name="email" ><span id="error"></span></div>
-                <div class="mb-3"><label class="form-label">Password</label><input class="form-control" type="password" name="password" id="pwd" placeholder=""><span id="errorpass"></span></div>
-                <div class="mb-3"><label class="form-label">Confirm Password</label><input class="form-control"  type="password" name="Cpassword" id="cpwd" placeholder=""><span id="cerrorpass"></span></div>
-                
-                <div class="mb-3"><input class="btn btn-primary d-block w-100" type="submit" value="Register" style="background: rgb(44,32,252);color: rgb(255,255,255);"></div>
-            </form>
-</div>
-</section>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="dob">Date of birth</label>
+                            <input class="app-input" type="date" id="dob" name="dob" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="cellno">Phone number</label>
+                            <input class="app-input" type="text" id="cellno" name="cellno" placeholder="0712345678" required>
+                        </div>
+                    </div>
 
+                    <div>
+                        <label class="app-label">Gender</label>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label class="rounded-2xl border border-slate-700 bg-slate-950/50 p-4 text-slate-200">
+                                <input type="radio" name="gender" value="Male" class="mr-3" required>
+                                Male
+                            </label>
+                            <label class="rounded-2xl border border-slate-700 bg-slate-950/50 p-4 text-slate-200">
+                                <input type="radio" name="gender" value="Female" class="mr-3" required>
+                                Female
+                            </label>
+                        </div>
+                    </div>
 
-    <!-- old form -->
+                    <div class="grid gap-5 md:grid-cols-[0.9fr_1.1fr]">
+                        <div>
+                            <label class="app-label" for="dob1">ID prefix</label>
+                            <input class="app-input" type="text" id="dob1" name="dob1" maxlength="6" readonly placeholder="YYMMDD" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="idno">ID suffix</label>
+                            <input class="app-input" type="text" id="idno" name="idno" maxlength="7" placeholder="Last 7 digits" required>
+                        </div>
+                    </div>
+                </section>
 
- <!-- <form  name="form" onsubmit="return validateForm();" method="post">
+                <section class="app-form-section space-y-5">
+                    <div>
+                        <div class="app-kicker">Section 2</div>
+                        <h2 class="mt-2 text-2xl font-bold text-white">Address information</h2>
+                    </div>
 
+                    <div>
+                        <label class="app-label" for="selector">Citizenship</label>
+                        <select class="app-select" id="selector" name="selector" required>
+                            <option value="">Select status</option>
+                            <option value="South Africa">South African</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
 
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="houseno">House number</label>
+                            <input class="app-input" type="text" id="houseno" name="houseno" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="streetname">Street name</label>
+                            <input class="app-input" type="text" id="streetname" name="streetname" required>
+                        </div>
+                    </div>
 
- <div class="container">
-                                                                                        
- <div class="row">
-                                                                                            <div class="col">
-                                                                                                <div class="shadow-none login-card"   style="max-width: 100%;background-color:#fff;margin-bottom:-125px">
-                                                                                                    <h5 style="font-weight: bold;color: rgb(48,37,252);"><i class="fa fa-user"></i>&nbsp;Personal information</h5>
-                                                                                                    <hr>
-                                                                                                    <div class="form-signin"><span class="reauth-email"> </span><label style="color: var(--color-text-grey);" class="form-label">First name</label>
-                                                                                                    <input class="form-control" type="text" name="name" id="name"  style="font-size: 14px;"><span id="nerror"></span><br>
-                                                                                                        <label style="color: var(--color-text-grey);" class="form-label">Last name</label>
-                                                                                                        <input class="form-control" type="text" name="surname"  id="surname" style="font-size: 14px;"><span id="serror"><br>
-                                                                                                        <label class="form-label" style="color: var(--color-text-grey);">Date Of Birth</label>
-                                                                                                        <input class="form-control"type="date" name="dob"  id="dob" max="2005-12-31" min="1918-01-31"  placeholder="Id number"  style="font-size: 14px;"><span id="doberror"></span><br>
-                                                                                                        <label class="form-label" style="color: var(--color-text-grey);">Id number</label>
-                                                                                                        <div class="d-lg-flex justify-content-lg-start"></div>
-                                                                                                        <div class="input-group"><input class="form-control" type="text" maxlength="6" name="dob1" id="dob1" style="width: 137px;font-size: 14px;" placeholder="D.O.B" readonly="">
-                                                                                                        <input class="form-control" type="text" style="width: 130px;font-size: 14px;" id="idno" name="idno" maxlength="7" style="width: 130px;font-size: 14px;" placeholder="Complete Id"></div> <span id="iderror"></span><br>
-                                                                                                        <label class="form-label" style="color: rgb(136,132,132);">Gender</label>
-                                                                                                        <div class="form-check"><input class="form-check-input" type="radio" name="gender"   maxlength="13" id="gender" value="Male"><label class="form-check-label" for="formCheck-1" style="color: rgb(136,132,132);">Male</label></div>
-                                                                                                        <div class="form-check"><input class="form-check-input" type="radio" name="gender"   maxlength="13" id="gender" value="Female"><label class="form-check-label" for="formCheck-2" style="color: rgb(136,132,132);">Female</label></div>  <span id="gerror"></span><br>
-                                                                                                        <label style="color: var(--color-text-grey);" class="form-label">Phone number</label> <input class="form-control" type="text" name="cellno" id="cellno"  style="font-size: 14px;"><span id="cerror"></span><br>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="suburb">Suburb</label>
+                            <input class="app-input" type="text" id="suburb" name="suburb" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="city">City</label>
+                            <input class="app-input" type="text" id="city" name="city" required>
+                        </div>
+                    </div>
 
-                                                                                                        <hr>
-                                                                                                
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                
-                                                                                                    <h5 style="font-weight: bold;color: rgb(48,37,252);"><i class="fa fa-users"></i>&nbsp;Next Of Keen Information</h5>
-                                                                                                    <hr>
-                                                                                                    <div class="form-signin"><span class="reauth-email"> </span>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">First name</label><input class="form-control"  type="text" name="keenfirstname" id="keenfirstname" placeholder=""><span id="keenfname"></span></div><br>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Last name</label><input class="form-control"  type="text" name="keenlastname" id="keenlastname" placeholder=""><span id="keenlname"></span></div><br>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Phone number</label><input class="form-control"  type="text" name="kphone" id="kphone" placeholder=""><span id="keenphone"></span></div><br>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Email</label><input class="form-control"  type="text" name="kemail" id="kemail" placeholder=""><span id="keenemail"></span></div><br>
-                                                                                                  </div>
-                                                                                                </div>
-                                                                                                
-                                                                                            </div>                                                                                      
-                                                                                
-                                                                                         <script>
-                                                                                            function countrycheck(that) 
-                                                                                            {
-                                                                                                if (that.value == "other") 
-                                                                                                {
-                                                                                                    document.getElementById("divcountry").style.display = "block";
-                                                                                                }
-                                                                                                else
-                                                                                                {
-                                                                                                    document.getElementById("divcountry").style.display = "none";
-                                                                                                }
-                                                                                            
-                                                                                               
-                                                                                                }
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="province">Province</label>
+                            <input class="app-input" type="text" id="province" name="province" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="zipcode">Zip code</label>
+                            <input class="app-input" type="text" id="zipcode" name="zipcode" required>
+                        </div>
+                    </div>
 
+                    <div id="country-wrapper" class="hidden">
+                        <label class="app-label" for="country">Country</label>
+                        <input class="app-input" type="text" id="country" name="country" placeholder="Enter country name">
+                    </div>
+                </section>
 
-                                                                                         </script>
-                                                                                            <div class="col">
-                                                                                                <div class="shadow-none login-card"   style="max-width: 100%;background-color:#fff;margin-bottom:-125px">
-                                                                                                    <h5 style="font-weight: bold;color: rgb(48,37,252);"><i class="fa fa-map-pin"></i>&nbsp;Address information</h5>
-                                                                                                    <hr>
-                                                                                                    <div class="form-signin"><span class="reauth-email"> </span>
-                                                                                                    <label style="color: var(--color-text-grey);" class="form-label">Country</label>
-                                                                                                 <select id="selector" onchange="countrycheck(this);"  class="form-control">
-                                                                                                 <option  value="">--Select Citizen--</option>
-                                                                                                   <option  value="South Africa">South african</option>
-                                                                                                   <option  value="other"   id="chkcountry">Other</option>
+                <section class="app-form-section space-y-5">
+                    <div>
+                        <div class="app-kicker">Section 3</div>
+                        <h2 class="mt-2 text-2xl font-bold text-white">Next of kin</h2>
+                    </div>
 
-                                                                                                   </select>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">House No.</label><input class="form-control"  type="text" name="houseno" id="houseno" ><span id="keenhouse"></span></div>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Street name</label><input class="form-control"  type="text" name="streetname" id="streetname" ><span id="keenstreet"></span></div>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Suburb</label><input class="form-control" type="text" name="suburb" id="suburb" ><span id="keensuburb"></span></div>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">City</label><input class="form-control"  type="text" name="city" id="city" ><span id="keencity"></span></div>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Province</label><input class="form-control"  type="text" name="province" id="province" ><span id="keenprovince"></span></div>
-                                                                                                    <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Zip Code</label><input class="form-control"  type="text" name="zipcode" id="zipcode" ><span id="keenzipcode"></span></div>
-               
-          
-                                                                                                    <div id="divcountry" style="display: none">
-                                                                                                     <div class="mb-3"><label style="color: var(--color-text-grey);" class="form-label">Country</label><input class="form-control" type="text" name="country" id="country" ><span id="keencountry"></span></div>
-                                                                                              
-                                                                                                </div>  </div>
-                                                                                            
-                                                                                                    <hr>
-                                                                                                </div>
-                                                                                                <div class="shadow-none login-card"   style="max-width: 100%;background-color:#fff">
-                                                                                                    <h5 style="font-weight: bold;color: rgb(48,37,252);"><i class="fa fa-unlock-alt"></i>&nbsp;Account&nbsp;</h5>
-                                                                                                    <hr>
-                                                                                                    <div class="form-signin"><span class="reauth-email"> </span>
-                                                                                                    <label style="color: var(--color-text-grey);" class="form-label">Email</label><input class="form-control" type="text"name="email" id="email" placeholder="Email address" autofocus="" style="font-size: 14px;"><span id="error"></span>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="keenfirstname">First name</label>
+                            <input class="app-input" type="text" id="keenfirstname" name="keenfirstname" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="keenlastname">Last name</label>
+                            <input class="app-input" type="text" id="keenlastname" name="keenlastname" required>
+                        </div>
+                    </div>
 
-                                                                                                    <label style="color: var(--color-text-grey);" class="form-label">Password</label><input class="form-control" type="password" name="password" id="pwd"  placeholder="Password" style="font-size: 14px;"><span id="errorpass"></span>
+                    <div class="grid gap-5 md:grid-cols-2">
+                        <div>
+                            <label class="app-label" for="kphone">Phone number</label>
+                            <input class="app-input" type="text" id="kphone" name="kphone" required>
+                        </div>
+                        <div>
+                            <label class="app-label" for="kemail">Email address</label>
+                            <input class="app-input" type="email" id="kemail" name="kemail" required>
+                        </div>
+                    </div>
+                </section>
 
-                                                                                                    <label style="color: var(--color-text-grey);" class="form-label">Confirm Password</label><input class="form-control" type="password" name="Cpassword" id="cpwd" placeholder="Confirm Password" style="font-size: 14px;"><span id="cerrorpass"></span>
+                <section class="app-form-section space-y-5">
+                    <div>
+                        <div class="app-kicker">Section 4</div>
+                        <h2 class="mt-2 text-2xl font-bold text-white">Account credentials</h2>
+                    </div>
 
-                                                                                                    
-                                                                                                        <hr>
-                                                                                                       <p  ><button class="btn text-center" type="submit" style="background: rgb(48,37,252);color: rgb(255,255,255);"><i class="fas fa-mouse-pointer"></i>&nbsp;Submit</a></p> 
-                                                                                                       <p style="color: black;"><a  href="../index.php" role="button" style=";color: rgb(48,37,252);">&nbsp;Goto homepage</a> OR <br> <a  href="login.php" role="button" style=";color: rgb(48,37,252);">&nbsp;Have an account?</a></p>
+                    <div>
+                        <label class="app-label" for="email">Email address</label>
+                        <input class="app-input" type="email" id="email" name="email" required>
+                    </div>
+                    <div>
+                        <label class="app-label" for="password">Password</label>
+                        <input class="app-input" type="password" id="password" name="password" required>
+                    </div>
+                    <div>
+                        <label class="app-label" for="Cpassword">Confirm password</label>
+                        <input class="app-input" type="password" id="Cpassword" name="Cpassword" required>
+                    </div>
 
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                      
+                    <div class="rounded-2xl border border-emerald-400/15 bg-emerald-400/8 p-4 text-sm leading-6 text-emerald-100">
+                        Passwords must contain uppercase, lowercase, a number, a special character, and be at least 8 characters long.
+                    </div>
+                </section>
+            </div>
 
+            <div class="app-divider my-8"></div>
 
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm leading-6 text-slate-300">Already have an account? <a class="font-semibold text-sky-300 hover:text-sky-200" href="login.php">Sign in here</a>.</p>
+                <button class="app-button app-button-primary" type="submit">
+                    <i class="fa fa-user-plus"></i>
+                    Register account
+                </button>
+            </div>
+        </form>
+    </main>
 
-</div>
-</form> -->
-    
-    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="assets/js/bs-init.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-1.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-2.js"></script>
-    <script src="assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="assets/js/Multi-step-form.js"></script>
-    <script src="assets/js/Navbar---Apple.js"></script>
-    <script src="assets/js/form-valid.js"></script>
+    <script>
+        const dobInput = document.getElementById('dob');
+        const dobPrefixInput = document.getElementById('dob1');
+        const citizenshipSelect = document.getElementById('selector');
+        const countryWrapper = document.getElementById('country-wrapper');
+        const countryInput = document.getElementById('country');
+
+        function updateDobPrefix() {
+            if (!dobInput.value) {
+                dobPrefixInput.value = '';
+                return;
+            }
+
+            const [year, month, day] = dobInput.value.split('-');
+            dobPrefixInput.value = (year || '').slice(-2) + (month || '') + (day || '');
+        }
+
+        function updateCountryField() {
+            const showCountry = citizenshipSelect.value === 'other';
+            countryWrapper.classList.toggle('hidden', !showCountry);
+
+            if (showCountry) {
+                countryInput.setAttribute('required', 'required');
+            } else {
+                countryInput.removeAttribute('required');
+                countryInput.value = '';
+            }
+        }
+
+        dobInput.addEventListener('change', updateDobPrefix);
+        citizenshipSelect.addEventListener('change', updateCountryField);
+        updateDobPrefix();
+        updateCountryField();
+    </script>
 </body>
-
 </html>

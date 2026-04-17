@@ -1,21 +1,14 @@
 <?php
-    include '..\faceapi\person_face_id\inc\connect.php';
- 
-    // Check connection
-    if (mysqli_connect_errno())
-      {
-      echo "Failed to connect to MySQL: " . mysqli_connect_error();
-      }
-     
-      if(!isset($_SESSION)) 
-      { 
-          session_start(); 
-          $email=$_SESSION['email'];
-          $id=$_SESSION['person_id'];
-      
-      
-      }
+include __DIR__ . '/connect.php';
+require_once __DIR__ . '/../../../src/auth.php';
 
+app_start_session();
 
+if (empty($_SESSION['email']) || empty($_SESSION['person_id'])) {
+  $loginPath = basename(dirname($_SERVER['SCRIPT_NAME'])) === 'inc' ? '../../login.php' : '../login.php';
+  app_redirect($loginPath, 'Please login to continue.');
+}
 
-    ?>
+$email = $_SESSION['email'];
+$id = $_SESSION['person_id'];
+?>

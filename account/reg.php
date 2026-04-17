@@ -76,6 +76,7 @@ if(isset($_POST['name']) && isset($_POST['surname']) && isset($_POST['dob']) && 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title> Identification System | Register</title><link rel="icon" href="../assets/img/logo.jpg">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/zephyr/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
     <link rel="stylesheet" href="assets/css/alert.css">
     <link rel="stylesheet" href="assets/css/Contact-Form-Clean.css">
@@ -87,6 +88,7 @@ if(isset($_POST['name']) && isset($_POST['surname']) && isset($_POST['dob']) && 
     <link rel="stylesheet" href="assets/css/Multi-step-form.css">
     <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/framework-forms.css">
 </head>
 <script>
 
@@ -472,8 +474,8 @@ cerrormessage.innerHTML=""
 }
 </script>
 
-<body style="background: rgb(255,255,255);">
-    <div style="height: 500px;background: url(&quot;assets/img/Facial-recognition-technology-explained-compressed.jpg&quot;) center / cover no-repeat;">
+<body class="framework-form-page" style="background: rgb(255,255,255);">
+  <div class="form-hero" style="height: 500px;background: url(&quot;assets/img/Facial-recognition-technology-explained-compressed.jpg&quot;) center / cover no-repeat;">
         <div class="d-flex justify-content-center align-items-center" style="height: inherit;min-height: initial;width: 100%;position: absolute;left: 0;background: rgba(30,41,99,0);">
             <div class="d-flex align-items-center order-5" style="height:200px;">
                 <div class="container">

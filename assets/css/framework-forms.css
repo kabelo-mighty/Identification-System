@@ -1,0 +1,195 @@
+.framework-form-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(13, 110, 253, 0.14), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(32, 201, 151, 0.18), transparent 28%),
+    linear-gradient(180deg, #eef4ff 0%, #f7fbff 45%, #f3f6fb 100%) !important;
+}
+
+.framework-form-page .form-hero {
+  position: relative;
+  min-height: 360px;
+  overflow: hidden;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.framework-form-page .form-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(10, 25, 48, 0.82), rgba(13, 110, 253, 0.38));
+}
+
+.framework-form-page .form-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.framework-form-page .login-card {
+  max-width: 480px !important;
+  margin: -96px auto 2.5rem !important;
+  padding: 2rem !important;
+  border-radius: 1.5rem !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(13, 110, 253, 0.08) !important;
+  box-shadow: 0 1.5rem 3rem rgba(22, 34, 63, 0.18) !important;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(8px);
+}
+
+.framework-form-page .login-card h1,
+.framework-form-page .login-card h3,
+.framework-form-page .register-photo h1,
+.framework-form-page .register-photo p:first-of-type,
+.framework-form-page .register-photo .form-label,
+.framework-form-page .register-photo label {
+  color: #183b56 !important;
+}
+
+.framework-form-page .login-card .lead,
+.framework-form-page .login-card p,
+.framework-form-page .register-photo p,
+.framework-form-page .register-photo span,
+.framework-form-page .register-photo .form-check-label {
+  color: #5f7388;
+}
+
+.framework-form-page .login-card picture img,
+.framework-form-page .register-photo picture img,
+.framework-form-page .register-photo img {
+  width: 88px;
+  height: 88px !important;
+  object-fit: cover;
+  padding: 0.9rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.12), rgba(32, 201, 151, 0.16));
+  box-shadow: 0 1rem 2rem rgba(13, 110, 253, 0.16);
+}
+
+.framework-form-page .login-card .form-control,
+.framework-form-page .register-photo .form-control,
+.framework-form-page .register-photo select.form-control,
+.framework-form-page .register-photo .input-group .form-control {
+  min-height: 50px;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(24, 59, 86, 0.12) !important;
+  background: #f8fbff !important;
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.04);
+  padding: 0.8rem 0.95rem !important;
+}
+
+.framework-form-page .login-card .form-control:focus,
+.framework-form-page .register-photo .form-control:focus,
+.framework-form-page .register-photo select.form-control:focus {
+  background: #ffffff !important;
+  border-color: rgba(13, 110, 253, 0.48) !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.12) !important;
+}
+
+.framework-form-page .register-photo {
+  background: transparent !important;
+  padding: 0 0 3rem !important;
+}
+
+.framework-form-page .register-photo .form-container {
+  display: block !important;
+  width: min(92vw, 840px) !important;
+  max-width: 840px !important;
+  margin: -72px auto 3rem !important;
+  border-radius: 1.75rem !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  border: 1px solid rgba(13, 110, 253, 0.08) !important;
+  box-shadow: 0 1.75rem 3rem rgba(22, 34, 63, 0.14) !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.framework-form-page .register-photo .form-container::before,
+.framework-form-page .login-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #0d6efd, #20c997);
+}
+
+.framework-form-page .register-photo form {
+  display: block !important;
+  width: 100% !important;
+  padding: 2rem !important;
+  background: transparent !important;
+  color: #183b56 !important;
+}
+
+.framework-form-page .register-photo .input-group {
+  gap: 0.75rem;
+}
+
+.framework-form-page .register-photo .input-group > .form-control {
+  width: auto !important;
+  flex: 1 1 0;
+}
+
+.framework-form-page .register-photo .form-check {
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border-radius: 1rem;
+  background: #f8fbff;
+  border: 1px solid rgba(24, 59, 86, 0.08);
+  margin-bottom: 0.65rem;
+}
+
+.framework-form-page .btn.btn-primary,
+.framework-form-page .btn-signin,
+.framework-form-page input[type="submit"].btn,
+.framework-form-page button[type="submit"] {
+  min-height: 50px;
+  border: none !important;
+  border-radius: 1rem !important;
+  background: linear-gradient(135deg, #0d6efd, #0b5ed7) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1rem 2rem rgba(13, 110, 253, 0.18);
+}
+
+.framework-form-page .btn.btn-primary:hover,
+.framework-form-page .btn-signin:hover,
+.framework-form-page input[type="submit"].btn:hover,
+.framework-form-page button[type="submit"]:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+.framework-form-page a {
+  color: #0b5ed7 !important;
+}
+
+.framework-form-page .fa-window-close,
+.framework-form-page .fas.fa-window-close {
+  color: #dc3545 !important;
+}
+
+.framework-form-page .footer-basic,
+.framework-form-page footer {
+  background: transparent !important;
+}
+
+@media (max-width: 768px) {
+  .framework-form-page .login-card {
+    margin: -48px auto 2rem !important;
+    padding: 1.5rem !important;
+  }
+
+  .framework-form-page .register-photo .form-container {
+    margin: -36px auto 2rem !important;
+    width: min(94vw, 840px) !important;
+  }
+
+  .framework-form-page .register-photo form {
+    padding: 1.5rem !important;
+  }
+}

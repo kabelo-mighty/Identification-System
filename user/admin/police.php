@@ -1,4 +1,5 @@
 <?php include 'inc/session.php';?>
+<?php $flashMessage = app_get_flash_message(); ?>
 
 <!DOCTYPE html>
 <html style="font-family: Nunito, sans-serif;">
@@ -18,6 +19,7 @@
 </head>
 
 <body id="page-top" >
+    <?php echo app_render_alert($flashMessage); ?>
     <div id="wrapper">
         <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
             <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#"><i class="fa fa-eye"></i>
@@ -130,12 +132,11 @@
                                                 <td><?php echo $delivered;?></td>
                                                 <td><?php echo $police;?></td>
                                                 <td>
-                                                <select onChange="window.location.href =this.value" style="border-radius: 0px;background: rgb(247,249,252);border-style: none;color: rgb(80,94,108);" name="" id="">
-                                                    <option value="">Select</option>
-                                                 
-                                                    <option value="notpolice.php?url=<?php echo $rows['person_id']?>">Unassign-default</option>
-                                                </select>
-                                                
+                                                <form method="post" action="notpolice.php" style="display:inline-block;">
+                                                    <?php echo app_csrf_input(); ?>
+                                                    <input type="hidden" name="person_id" value="<?php echo $rows['person_id']; ?>">
+                                                    <button type="submit" style="border-radius: 0px;background: rgb(247,249,252);border-style: none;color: rgb(80,94,108);">Unassign</button>
+                                                </form>
                                                 </td>
 												 
                                                

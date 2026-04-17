@@ -1,24 +1,67 @@
-<!--session-->
-<?php include'inc/connect.php';?>
+<?php include 'inc/session.php'; ?>
+<?php
+$flashMessage = app_get_flash_message();
+$redirectPath = 'non_citi.php';
+$id = $_GET['value'] ?? '';
+
+if (!ctype_digit((string) $id) || (int) $id <= 0) {
+  app_redirect($redirectPath, 'Invalid person selected.');
+}
+
+$id = (int) $id;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
+  app_require_csrf_token('viewnoncity.php?value=' . $id);
+
+  $name = trim((string) ($_POST['name'] ?? ''));
+  $surname = trim((string) ($_POST['surname'] ?? ''));
+  $gender = trim((string) ($_POST['gender'] ?? ''));
+  $email = app_normalize_email($_POST['email'] ?? '');
+  $cellno = trim((string) ($_POST['cellno'] ?? ''));
+  $idno = trim((string) ($_POST['idno'] ?? ''));
+  $houseno = trim((string) ($_POST['houseno'] ?? ''));
+  $streetname = trim((string) ($_POST['streetname'] ?? ''));
+  $city = trim((string) ($_POST['city'] ?? ''));
+  $province = trim((string) ($_POST['province'] ?? ''));
+  $country = trim((string) ($_POST['country'] ?? ''));
+  $suburb = trim((string) ($_POST['suburb'] ?? ''));
+  $zipcode = trim((string) ($_POST['zipcode'] ?? ''));
+  $keenfirstname = trim((string) ($_POST['keenfirstname'] ?? ''));
+  $keenlastname = trim((string) ($_POST['keenlastname'] ?? ''));
+  $kphone = trim((string) ($_POST['kphone'] ?? ''));
+  $kemail = app_normalize_email($_POST['kemail'] ?? '');
+
+  $statement = mysqli_prepare($conn, 'UPDATE person SET firstname = ?, lastname = ?, gender = ?, id_number = ?, phone = ?, email = ?, house_no = ?, street_name = ?, suburb = ?, city = ?, province = ?, zip_code = ?, country = ?, keen_firstname = ?, keen_lastname = ?, keen_phone = ?, keen_email = ? WHERE person_id = ?');
+  mysqli_stmt_bind_param($statement, 'sssssssssssssssssi', $name, $surname, $gender, $idno, $cellno, $email, $houseno, $streetname, $suburb, $city, $province, $zipcode, $country, $keenfirstname, $keenlastname, $kphone, $kemail, $id);
+  $updated = mysqli_stmt_execute($statement);
+  mysqli_stmt_close($statement);
+
+  if (!$updated) {
+    app_redirect('viewnoncity.php?value=' . $id, 'Information could not be updated.');
+  }
+
+  app_redirect($redirectPath, 'Information updated.');
+}
+
+$statement = mysqli_prepare($conn, 'SELECT * FROM person WHERE person_id = ? LIMIT 1');
+mysqli_stmt_bind_param($statement, 'i', $id);
+mysqli_stmt_execute($statement);
+$result = mysqli_stmt_get_result($statement);
+$data = mysqli_fetch_assoc($result);
+mysqli_stmt_close($statement);
+
+if (!$data) {
+  app_redirect($redirectPath, 'Person not found.');
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-<?php
-$id=$_GET['value'];
-
-
-
-
-
-
-
-
-
-?>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title> Identification System | Edit Profile</title><link rel="icon" href="assets/img/logo.png">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/zephyr/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee">
     <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
@@ -26,6 +69,7 @@ $id=$_GET['value'];
     <link rel="stylesheet" href="assets/fonts/fontawesome5-overrides.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+    <link rel="stylesheet" href="../../assets/css/framework-forms.css">
    
 </head>
 
@@ -638,75 +682,12 @@ cerror.innerHTML="";
 
    
     
-<body style="background: #ffffff;">
+<body class="framework-form-page" style="background: #ffffff;">
+  <?php echo app_render_alert($flashMessage); ?>
     <section class="register-photo" style="background: rgb(255,255,255);">
         <div class="form-container">
-        <?php
-
-
-$qry=mysqli_query($conn,"select * from person WHERE person_id='$id'");
-$data=mysqli_fetch_array($qry);
-
-
-
-if(isset($_POST['name']) && isset($_POST['surname']) && isset($_POST['gender'])&& isset($_POST['email']) &&isset($_POST['cellno']) && isset($_POST['idno']))
-{
-
-    
- //personal information   
-$name=$_POST['name'];
-$surname=$_POST['surname'];
-$gender=$_POST['gender'];
-$email=$_POST['email'];
-$cellno=$_POST['cellno'];
-$idno=$_POST['idno'];
-//address information
-$houseno=$_POST['houseno'];
-$streetname=$_POST['streetname'];
-$city=$_POST['city'];
-$province=$_POST['province'];
-$country=$_POST['country'];
-$suburb=$_POST['suburb'];
-$zipcode=$_POST['zipcode'];
-//next keen
-$keenfirstname=$_POST['keenfirstname'];
-$keenlastname=$_POST['keenlastname'];
-$kphone=$_POST['kphone'];
-$kemail=$_POST['kemail'];
-
-  
-
-  
-$command="UPDATE  person
- SET 
- firstname='$name', lastname='$surname', gender='$gender',id_number='$idno',phone='$cellno',email='$email',
- house_no='$houseno', street_name='$streetname', suburb='$suburb', city='$city',province='$province',zip_code='$zipcode',country='$country',
- keen_firstname='$keenfirstname', keen_lastname='$keenlastname', keen_phone='$kphone', keen_email='$kemail'
- WHERE person_id='$id'";
-
-
-
-$edit=mysqli_query($conn,$command);
-  
-
-if($edit){
-mysqli_close($conn);
-
-     
-echo '<script>alert(" Information Updated.");window.location = "non_citi.php";</script>';
-
-exit;
-
-}
-else
-{
-    echo mysqli_error();
-
-}
-}
-
-?>
             <form action="" name="form" onsubmit="return validateForm();" method="post">
+        <?php echo app_csrf_input(); ?>
                 <p class="d-lg-flex justify-content-lg-center" style="color: rgb(44,32,252);"><img class="d-lg-flex justify-content-lg-center" src="assets/img/logo.png" style="height: 150px;"></p>
                 <h1 class="text-center" style="font-family: ABeeZee, sans-serif;font-size: 21px;">Update user information<a class="float-end" href="non_citi.php"><i class="fas fa-window-close" style="color: rgb(44,32,252);"></i></a></h1>
                 <hr>

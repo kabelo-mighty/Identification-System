@@ -1,35 +1,15 @@
 <?php
+require_once __DIR__ . '/inc/admin_actions.php';
 
-include 'inc/connect.php';
-$cu=$_GET['url'];
-$qry=mysqli_query($conn,"select * from person WHERE person_id='$cu'");
+admin_require_post_action('people.php');
+$personId = admin_require_numeric_post_param('person_id', 'people.php');
 
-$data=mysqli_fetch_array($qry);
-
-
-$command="UPDATE  person
- SET 
- confirmed_acc='0'
- WHERE person_id='$cu'";
-
-
-$edit=mysqli_query($conn,$command);
-  
-
-if($edit){
-mysqli_close($conn);
-
-echo '<script>alert("Account status changed to not confirmed.");window.location = "people.php";</script>';
-
-exit;
-
-}
-else
-{
-    echo mysqli_error();
-
+if (!admin_person_exists($personId)) {
+    app_redirect('people.php', 'Person not found.');
 }
 
+if (!admin_update_person_field($personId, 'confirmed_acc', '0')) {
+    app_redirect('people.php', 'Account status could not be updated.');
+}
 
-
-?>
+app_redirect('people.php', 'Account is no longer confirmed.');

@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title> Identification System | Add</title><link rel="icon" href="../../assets/img/logo.jpg">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/zephyr/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee">
     <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
@@ -17,6 +18,7 @@
     <link rel="stylesheet" href="assets/css/Profile-Card.css">
     <link rel="stylesheet" href="assets/css/Registration-Form-with-Photo.css">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/framework-forms.css">
 </head>
 
 <style>
@@ -306,7 +308,7 @@ $id=$_GET['value'];
    }
 
 ?>
-<body style="background: #ffffff;">
+<body class="framework-form-page" style="background: #ffffff;">
     <section class="register-photo" style="background: rgb(255,255,255);">
         <div class="form-container">
             <form name="form" onsubmit="return validateForm();"  action=""  method="post" >

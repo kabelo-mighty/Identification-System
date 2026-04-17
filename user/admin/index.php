@@ -1,179 +1,119 @@
+<?php
+include '../../src/connect.php';
+require_once '../../src/auth.php';
+
+$flashMessage = app_get_flash_message();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = app_normalize_email($_POST['email'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
+
+    if ($email === '' || $password === '') {
+        app_redirect('index.php', 'Email and password are required.');
+    }
+
+    $statement = mysqli_prepare($conn, 'SELECT admin_id, email, password FROM admin WHERE email = ? LIMIT 1');
+    mysqli_stmt_bind_param($statement, 's', $email);
+    mysqli_stmt_execute($statement);
+    $result = mysqli_stmt_get_result($statement);
+    $row = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($statement);
+
+    if (!$row || !app_verify_password($password, $row['password'])) {
+        app_redirect('index.php', 'Wrong email or password.');
+    }
+
+    if (app_password_needs_upgrade($row['password'])) {
+        $newHash = app_hash_password($password);
+        $updateStatement = mysqli_prepare($conn, 'UPDATE admin SET password = ? WHERE admin_id = ?');
+        mysqli_stmt_bind_param($updateStatement, 'si', $newHash, $row['admin_id']);
+        mysqli_stmt_execute($updateStatement);
+        mysqli_stmt_close($updateStatement);
+    }
+
+    app_start_session();
+    session_regenerate_id(true);
+    $_SESSION['email'] = $row['email'];
+    $_SESSION['admin_id'] = $row['admin_id'];
+
+    app_redirect('dashboard.php', 'Login was successful.');
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-<?php
- 
- //connection
- include '../../src/connect.php'; 
-if(isset($_POST['email']) && isset($_POST['password'])){
- 
-//Assign
-
-$email=$_POST['email'];
-$password=md5($_POST['password']);
- session_start();
-
-//check record
-$query="select * from admin where email='$email'and password='$password'";
-$result=mysqli_query($conn,$query) or die(mysqli_error($conn));
-$row=mysqli_fetch_array($result);
-//validate email if exist
-$check=mysqli_query($conn,"select * from admin WHERE email='$email'");
-
-
-if(mysqli_num_rows($check)){
-
-if($row !==NULL && strtolower($row['email'])==strtolower($email) && $row['password']==$password)
-{
-
-
-   
-    $_SESSION['email']=$row['email'];
-    $email=$_SESSION['email'];
-    $_SESSION['admin_id']=$row['admin_id'];
-    $id=$_SESSION['admin_id'];
-   
-    echo'<script>alert("Login was successful")</script>'; 
-  
-    header('Location: dashboard.php');
-    
-    
-
-}else
-{
-
-   
-    echo'<script>alert("Wrong email or password.");window.location = "index.php";</script>';
-    
-     exit;
-}
-
-}else
-{
-
-    echo'<script>alert("You are not an authorized admin.");window.location = "index.php";</script>';
-    
-    exit;
-
-
-}
-}
-
-?>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System | Login</title><link rel="icon" href="../../assets/img/logo.jpg">
-    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Muli">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Admin Login</title>
+    <link rel="icon" href="../../assets/img/logo.jpg">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
-    <link rel="stylesheet" href="assets/fonts/fontawesome5-overrides.min.css">
-    <link rel="stylesheet" href="assets/css/alert.css">
-    <link rel="stylesheet" href="assets/css/Bootstrap-4---Profile-Creation-Wizard.css">
-    <link rel="stylesheet" href="assets/css/Contact-Form-Clean.css">
-    <link rel="stylesheet" href="assets/css/Customizable-Background--Overlay.css">
-    <link rel="stylesheet" href="assets/css/Footer-Basic.css">
-    <link rel="stylesheet" href="assets/css/Google-Style-Login.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="assets/css/index-top-info-1.css">
-    <link rel="stylesheet" href="assets/css/index-top-info.css">
-    <link rel="stylesheet" href="assets/css/LinkedIn-like-Profile-Box.css">
-    <link rel="stylesheet" href="assets/css/Multi-step-form.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple-1.css">
-    <link rel="stylesheet" href="assets/css/Navbar---Apple.css">
-    <link rel="stylesheet" href="assets/css/Navigation-Clean.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
-    <link rel="stylesheet" href="assets/css/Profile-Card.css">
-    <link rel="stylesheet" href="assets/css/Profile-with-data-and-skills.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="stylesheet" href="assets/css/Video-Responsive.css">
+    <link rel="stylesheet" href="../../assets/css/tailwind-ui.css">
 </head>
-<script>
+<body class="app-shell hero-grid">
+    <main class="mx-auto grid min-h-screen max-w-7xl gap-10 px-6 py-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:px-8">
+        <section class="glass-panel app-card rounded-[2rem] p-7 md:p-10">
+            <div class="app-badge app-badge-warn">Operations workspace</div>
+            <h1 class="mt-5 text-4xl font-extrabold text-white md:text-5xl">A control room for identity operations.</h1>
+            <p class="mt-5 text-base leading-7 text-slate-300">Admin access controls people records, case handling, police assignments, report generation, and account approval from one dashboard.</p>
 
-    
-function validateForm() 
-{
-var uerror=document.getElementById("uerror");
-var perror=document.getElementById("perror");
+            <div class="mt-8 grid gap-4">
+                <div class="app-form-section">
+                    <h2 class="text-lg font-semibold text-white">What you can manage</h2>
+                    <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-300">
+                        <li>Citizen and non-citizen records</li>
+                        <li>Police assignments and account confirmations</li>
+                        <li>Cases, reporting, and facial record coverage</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
+        <section class="glass-panel-strong app-card rounded-[2rem] p-7 md:p-10">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <div class="app-kicker">Restricted access</div>
+                    <h2 class="mt-3 text-3xl font-bold text-white">Admin Login</h2>
+                </div>
+                <a class="brand-badge" href="../../index.php">
+                    <i class="fa fa-home"></i>
+                    Home
+                </a>
+            </div>
 
-if(document.forms["form"]["email"].value=="" && document.forms["form"]["password"].value=="")
-{
+            <div class="mt-6">
+                <?php echo app_render_flash_banner($flashMessage); ?>
+            </div>
 
-uerror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+" Email field should not be empty *</span>"
-perror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+"Password field should not be empty *</span>"
-
-return false;
-
-}else
-if(document.forms["form"]["email"].value=="")
-{
-
-uerror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+"Please fill the email field *</span>"
-
-return false;
-
-}else
-{
-
-    uerror.innerHTML=""; 
-}
-
-if(document.forms["form"]["password"].value=="")
-{
-
-
-perror.innerHTML="<span class='lead text-start' style='color:rgb(46,35,253);font-size:12px;''>"+" Please fill the password field *</span>"
-
-return false;
-
-}else
-{
-
-    perror.innerHTML=""; 
-}
-
-}
-</script>
-<body  style="background: rgb(255,255,255);">
-    <div class="shadow-lg login-card" data-aos="zoom-in" data-aos-duration="1000" data-aos-delay="500" style="margin-top: 130px;border-radius: 13px;background: rgb(255,255,255);">
-        <p style="text-align: center;">
-            <picture><img src="assets/img/logo.png" style="height: 120px;"></picture>
-        </p>
-        <h1 class="text-uppercase" style="font-size: 19px;text-align: left;color: rgb(46,35,253);"></h1>
-        <h3 class="text-uppercase" style="font-size: 19px;text-align: center;color: rgb(46,35,253);"><strong>Admin Login</strong>&nbsp;</h3>
-        <form class="form-signin" name="form" onsubmit="return validateForm();"  method="post" action="">
-        <span class="reauth-email"> </span><input class="form-control"  type="email" id="email"  name="email" placeholder="Email address" autofocus="" style="font-size: 14px;"><span id="uerror"></span>
-        <input class="form-control" type="password" id="password" name="password" placeholder="Password" style="font-size: 14px;"><span id="perror"></span>
-            <div class="checkbox"></div><button class="btn btn-primary btn-lg d-block btn-signin w-100" type="submit" style="background: rgb(48,37,252);color: #ffff;">Login</button>
-        </form>
-    </div>
-    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="assets/js/bs-init.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-1.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="assets/js/Bootstrap-4---Profile-Creation-Wizard-2.js"></script>
-    <script src="assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="assets/js/Multi-step-form.js"></script>
-    <script src="assets/js/Navbar---Apple.js"></script>
+            <form class="mt-6 space-y-5" method="post" action="">
+                <div>
+                    <label class="app-label" for="email">Admin email</label>
+                    <input class="app-input" type="email" id="email" name="email" placeholder="admin@example.com" required>
+                </div>
+                <div>
+                    <label class="app-label" for="password">Password</label>
+                    <input class="app-input" type="password" id="password" name="password" placeholder="Enter your admin password" required>
+                </div>
+                <button class="app-button app-button-primary w-full" type="submit">
+                    <i class="fa fa-unlock-alt"></i>
+                    Enter Dashboard
+                </button>
+            </form>
+        </section>
+    </main>
 </body>
-
 </html>

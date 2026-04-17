@@ -1,64 +1,50 @@
+<?php
+include '../src/connect.php';
+require_once '../src/auth.php';
+
+$flashMessage = app_get_flash_message();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = app_normalize_email($_POST['email'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
+
+    if ($email === '' || $password === '') {
+        app_redirect('login.php', 'Email and password are required.');
+    }
+
+    $statement = mysqli_prepare($conn, 'SELECT person_id, email, password, employee_type FROM person WHERE email = ? LIMIT 1');
+    mysqli_stmt_bind_param($statement, 's', $email);
+    mysqli_stmt_execute($statement);
+    $result = mysqli_stmt_get_result($statement);
+    $row = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($statement);
+
+    if (!$row || !app_verify_password($password, $row['password'])) {
+        app_redirect('login.php', 'Wrong email or password.');
+    }
+
+    if (strcasecmp($row['employee_type'], 'Police') !== 0) {
+        app_redirect('login.php', 'Only authorized police users can use this service.');
+    }
+
+    if (app_password_needs_upgrade($row['password'])) {
+        $newHash = app_hash_password($password);
+        $updateStatement = mysqli_prepare($conn, 'UPDATE person SET password = ? WHERE person_id = ?');
+        mysqli_stmt_bind_param($updateStatement, 'si', $newHash, $row['person_id']);
+        mysqli_stmt_execute($updateStatement);
+        mysqli_stmt_close($updateStatement);
+    }
+
+    app_start_session();
+    session_regenerate_id(true);
+    $_SESSION['email'] = $row['email'];
+    $_SESSION['person_id'] = $row['person_id'];
+
+    app_redirect('face.php', 'Login successful.');
+}
+?>
 <!DOCTYPE html>
 <html  lang="en">
-<?php
- 
-
- //connection
- include '..\faceapi\person_face_id\inc\connect.php';  
-if(isset($_POST['email']) && isset($_POST['password'])){
- 
-//Assign
-
-$email=$_POST['email'];
-$password=md5($_POST['password']);
- session_start();
-
-//check record
-$query="select * from person where email='$email'and password='$password'";
-$result=mysqli_query($conn,$query) or die(mysqli_error($conn));
-$row=mysqli_fetch_array($result);
-//validate email if exist
-$check=mysqli_query($conn,"select * from person WHERE email='$email'");
-
-
-if(mysqli_num_rows($check)){
-
-if($row !==NULL && strtolower($row['email'])==strtolower($email) && $row['password']==$password && $row['employee_type']=='Police')
-{
-
-
-   
-    $_SESSION['email']=$row['email'];
-    $email=$_SESSION['email'];
-    $_SESSION['person_id']=$row['person_id'];
-    $id=$_SESSION['person_id'];
-    echo'<script>alert("Login successful");window.location = "face.php"</script>'; 
-  
-
-    
-    
-
-}else
-{
-
-   
-    echo'<script>alert("Wrong email or password.");window.location = "login.php";</script>';
-    
-     exit;
-}
-}else
-{
-
-    echo'<script>alert("Youre not an authorized user,Only authorized users can use this service.");window.location = "login.php";</script>';
-    
-    exit;
-
-
-}
-
-}
-
-?>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
@@ -144,6 +130,7 @@ return false;
 }
 </script>
 <body style="background: rgb(255,255,255);">
+    <?php echo app_render_alert($flashMessage); ?>
     <div class=" shadow-lg login-card"  style="margin-top: 130px;background: rgb(255,255,255);opacity: 0.91;">
         <h3 class="text-uppercase" data-bs-toggle="tooltip" data-bss-tooltip="" style="font-size: 19px;text-align: right;color: rgb(46,35,253);" title="close"><a href="../index.php"><i class="fas fa-window-close" style="font-size: 21px;"></i></a>&nbsp;</h3>
         <p style="text-align: center;"><i class="la la-unlock" style="font-size: 131px;color: rgb(89,81,253);"></i></p>

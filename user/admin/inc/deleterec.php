@@ -1,21 +1,11 @@
 <?php
+require_once __DIR__ . '/admin_actions.php';
 
-include 'connect.php';
+admin_require_post_action('../criminal.php');
+$docketId = admin_require_numeric_post_param('docket_id', '../criminal.php');
 
-// Check connection
-if (mysqli_connect_errno())
-  {
-  echo "Failed to connect to MySQL: " . mysqli_connect_error();
-  }
-  $id=$_GET['value'];
+if (!admin_delete_docket_record($docketId)) {
+    app_redirect('../criminal.php', 'Record could not be deleted.');
+}
 
-    $sql4=" DELETE From docket WHERE docket_id='$id'";
-    $result4=mysqli_query($conn,$sql4);
-    if (!$result4) {
-    	echo "db access denied ".mysqli_error();
-    }else{
-      echo '<script>alert("Record succesfully deleted.");window.location = "../criminal.php";</script>';
-  }
-  
-
-?>
+app_redirect('../criminal.php', 'Record successfully deleted.');

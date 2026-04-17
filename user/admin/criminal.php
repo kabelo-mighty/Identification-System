@@ -1,4 +1,5 @@
 <?php include 'inc/session.php';?>
+<?php $flashMessage = app_get_flash_message(); ?>
 
 <!DOCTYPE html>
 <html style="font-family: Nunito, sans-serif;">
@@ -18,6 +19,7 @@
 </head>
 
 <body id="page-top" >
+    <?php echo app_render_alert($flashMessage); ?>
     <div id="wrapper">
         <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
             <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#"><i class="fa fa-eye"></i>
@@ -135,7 +137,11 @@
                                 <td><?php echo $rows1['year'];?></td>
                                 <td>
                                 <p><a  href="editrec.php?value=<?php echo $rows1['docket_id']; ?>"><i class="fas fa-edit" style="font-size: 16px;color: blue;"></i></a>&nbsp;
-                                <a onclick="deleteProfile();"><i class="fas fa-trash" style="font-size: 13px;color: red;"></i></a>
+                                <form method="post" action="inc/deleterec.php" style="display:inline-block;" onsubmit="return confirm('Do you really want to delete the record?');">
+                                    <?php echo app_csrf_input(); ?>
+                                    <input type="hidden" name="docket_id" value="<?php echo $rows1['docket_id']; ?>">
+                                    <button type="submit" style="background:none;border:none;padding:0;"><i class="fas fa-trash" style="font-size: 13px;color: red;"></i></button>
+                                </form>
                                 </p>
                                 </td>              
                             </tr>
@@ -197,12 +203,4 @@
 
  
 </body>
-<script>
-  //show a confirmation and redirect to the delete profile script
-  function deleteProfile() {
-    if (confirm("Do you really want to delete the record?")) {
-        location.href = 'inc/deleterec.php?value=<?php echo $t;?>';
-    }
-}
-</script>
 </html>

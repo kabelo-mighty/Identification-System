@@ -1,38 +1,15 @@
 <?php
+require_once __DIR__ . '/inc/admin_actions.php';
 
-include 'inc/connect.php';
-$cu=$_GET['url'];
+admin_require_post_action('police.php');
+$personId = admin_require_numeric_post_param('person_id', 'police.php');
 
-$qry=mysqli_query($conn,"select * from person WHERE person_id='$cu'");
-
-$data=mysqli_fetch_array($qry);
-
-
-
-
-$command="UPDATE  person
- SET 
- employee_type='Default'
- WHERE person_id='$cu'";
-
-
-$edit=mysqli_query($conn,$command);
-  
-
-if($edit){
-mysqli_close($conn);
-
-echo '<script>alert("Person is unassigned from using ai function.");window.location = "police.php";</script>';
-
-exit;
-
-}
-else
-{
-    echo mysqli_error();
-
+if (!admin_person_exists($personId)) {
+    app_redirect('police.php', 'Person not found.');
 }
 
+if (!admin_update_person_field($personId, 'employee_type', 'Default')) {
+    app_redirect('police.php', 'Employment type could not be updated.');
+}
 
-
-?>
+app_redirect('police.php', 'Person is unassigned from the AI function.');

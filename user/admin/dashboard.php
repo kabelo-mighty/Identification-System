@@ -1,80 +1,188 @@
-<?php include 'inc/session.php';?>
+<?php include 'inc/session.php'; ?>
+<?php include 'inc/connect.php'; ?>
+<?php
+$adminName = 'Administrator';
+$adminStatement = mysqli_prepare($conn, 'SELECT firstname, lastname FROM admin WHERE admin_id = ? LIMIT 1');
+if ($adminStatement) {
+    mysqli_stmt_bind_param($adminStatement, 'i', $id);
+    mysqli_stmt_execute($adminStatement);
+    $adminResult = mysqli_stmt_get_result($adminStatement);
+    $adminRow = mysqli_fetch_assoc($adminResult);
+    mysqli_stmt_close($adminStatement);
+
+    if ($adminRow) {
+        $adminName = trim($adminRow['firstname'] . ' ' . $adminRow['lastname']);
+    }
+}
+
+function dashboard_count($conn, $query)
+{
+    $result = mysqli_query($conn, $query);
+    if (!$result) {
+        return '0';
+    }
+
+    $row = mysqli_fetch_assoc($result);
+    return (string) ($row['count'] ?? '0');
+}
+
+$citizensCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM person WHERE country = 'South Africa'");
+$nonCitizensCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM person WHERE country != 'South Africa'");
+$facesCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM face_identification");
+$policeCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM person WHERE employee_type = 'Police'");
+$casesCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM docket");
+?>
 <!DOCTYPE html>
-<html>
-<?php include 'inc/connect.php';?>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title> Identification System | Dashboard</title><link rel="icon" href="assets/img/logo.png">
-    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ABeeZee&amp;display=swap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification System | Dashboard</title>
+    <link rel="icon" href="assets/img/logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="../assets/fonts/font-awesome.min.css">
     <link rel="stylesheet" href="../assets/fonts/fontawesome5-overrides.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.5/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="../../assets/css/tailwind-ui.css">
 </head>
-
-<body id="page-top">
-    <div id="wrapper">
-        <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
-            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#"><i class="fa fa-eye"></i>
-                    <div class="sidebar-brand-icon rotate-n-15"></div>
-                    <div class="sidebar-brand-text mx-3"><span>is system</span></div>
-                </a>
-                <hr class="sidebar-divider my-0">
-                <?php include'inc/toggle.php';?>
-                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
-            </div>
-        </nav>
-        <div class="d-flex flex-column" id="content-wrapper">
-            <div id="content">
-                <nav class="navbar navbar-light navbar-expand bg-white shadow mb-4 topbar static-top">
-                    <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
-                        <ul class="navbar-nav flex-nowrap ms-auto">
-                            <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
-                                <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
-                                    <form class="me-auto navbar-search w-100">
-                                        <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ...">
-                                            <div class="input-group-append"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </li>
-                            <div class="d-none d-sm-block topbar-divider"></div>
-                            <li class="nav-item dropdown no-arrow">
-                               <!--acc-->
-                             <?php include'inc/nav.php'; ?>
-
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-                <div class="container-fluid">
-                    <div class="d-sm-flex justify-content-between align-items-center mb-4">
-                        <h3 class="text-dark mb-0">Dashboard</h3><a class="btn btn-primary btn-sm d-none d-sm-inline-block" role="button" href="report.php"><i class="fas fa-download fa-sm text-white-50"></i>&nbsp;Generate Report</a>
-                    </div>
-                  <!--stats-->
-                  <?php include'inc/stats.php';?>
+<body class="app-shell hero-grid">
+    <div class="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
+        <aside class="glass-panel app-card w-full rounded-[2rem] p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-80 lg:self-start">
+            <div class="flex items-center gap-4 border-b border-white/10 pb-5">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300">
+                    <i class="fa fa-shield text-xl"></i>
+                </div>
+                <div>
+                    <div class="app-kicker">Admin console</div>
+                    <h1 class="mt-1 text-xl font-bold text-white">Identification System</h1>
                 </div>
             </div>
-           
-        </div>
-    </div>
-    <script src="../assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.6.0/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.6.5/js/buttons.print.min.js"></script>
-    <script src="../assets/js/DataTable---Fully-BSS-Editable.js"></script>
-    <script src="../assets/js/theme.js"></script>
-</body>
 
+            <nav class="mt-6 space-y-2">
+                <a class="app-sidebar-link is-active" href="dashboard.php"><i class="fas fa-tachometer-alt w-5"></i><span>Dashboard</span></a>
+                <a class="app-sidebar-link" href="people.php"><i class="fa fa-users w-5"></i><span>Citizens</span></a>
+                <a class="app-sidebar-link" href="non_citi.php"><i class="fa fa-globe w-5"></i><span>Non Citizens</span></a>
+                <a class="app-sidebar-link" href="police.php"><i class="fa fa-user-secret w-5"></i><span>Police</span></a>
+                <a class="app-sidebar-link" href="criminal.php"><i class="fa fa-folder-open w-5"></i><span>Cases</span></a>
+                <a class="app-sidebar-link" href="report.php"><i class="fa fa-line-chart w-5"></i><span>Reports</span></a>
+                <a class="app-sidebar-link" href="inc/logout.php"><i class="fa fa-power-off w-5"></i><span>Logout</span></a>
+            </nav>
+
+            <div class="mt-8 rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4">
+                <div class="app-badge app-badge-info">Session</div>
+                <p class="mt-3 text-lg font-semibold text-white"><?php echo htmlspecialchars($adminName, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p class="mt-1 text-sm text-slate-400"><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></p>
+            </div>
+        </aside>
+
+        <main class="flex-1 space-y-6">
+            <section class="glass-panel-strong app-card rounded-[2rem] p-6 md:p-8">
+                <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                        <div class="app-kicker">Operations overview</div>
+                        <h2 class="mt-3 text-4xl font-extrabold text-white">Dashboard</h2>
+                        <p class="mt-4 max-w-3xl text-base leading-7 text-slate-300">Track record coverage, role assignments, and case activity from one modern operations surface.</p>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <a class="app-button app-button-primary" href="report.php"><i class="fa fa-download"></i>Generate Report</a>
+                        <a class="app-button app-button-secondary" href="people.php"><i class="fa fa-arrow-right"></i>Manage Records</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars($citizensCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">South Africans</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars($nonCitizensCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Non South Africans</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars($facesCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Face records</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars($policeCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Police accounts</div>
+                </div>
+                <div class="app-stat">
+                    <div class="app-stat-value"><?php echo htmlspecialchars($casesCount, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="app-stat-label">Cases</div>
+                </div>
+            </section>
+
+            <section class="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+                <div class="glass-panel app-card rounded-[2rem] p-6">
+                    <div class="app-kicker">Quick actions</div>
+                    <h3 class="mt-3 text-2xl font-bold text-white">Move directly into operational tasks.</h3>
+                    <div class="mt-6 grid gap-4 md:grid-cols-2">
+                        <a class="app-form-section block transition hover:-translate-y-1" href="people.php">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-lg font-semibold text-white">Review citizen records</span>
+                                <i class="fa fa-users text-sky-300"></i>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-slate-300">Confirm accounts, update records, and manage citizen status.</p>
+                        </a>
+                        <a class="app-form-section block transition hover:-translate-y-1" href="police.php">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-lg font-semibold text-white">Manage police roles</span>
+                                <i class="fa fa-user-secret text-emerald-300"></i>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-slate-300">View assigned officers and maintain police-specific accounts.</p>
+                        </a>
+                        <a class="app-form-section block transition hover:-translate-y-1" href="criminal.php">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-lg font-semibold text-white">Open case records</span>
+                                <i class="fa fa-folder-open text-amber-300"></i>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-slate-300">Inspect and update docket entries linked to person records.</p>
+                        </a>
+                        <a class="app-form-section block transition hover:-translate-y-1" href="report.php">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-lg font-semibold text-white">Export reporting</span>
+                                <i class="fa fa-line-chart text-rose-300"></i>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-slate-300">Generate summaries and inspect the broader dataset.</p>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="glass-panel app-card rounded-[2rem] p-6">
+                    <div class="app-kicker">System focus</div>
+                    <h3 class="mt-3 text-2xl font-bold text-white">Where this platform is strongest.</h3>
+                    <div class="mt-6 space-y-4">
+                        <div class="app-form-section">
+                            <div class="app-badge app-badge-success">Identity</div>
+                            <p class="mt-3 text-sm leading-6 text-slate-300">Centralized records connect personal details, contact data, next-of-kin, and operational role information.</p>
+                        </div>
+                        <div class="app-form-section">
+                            <div class="app-badge app-badge-info">Verification</div>
+                            <p class="mt-3 text-sm leading-6 text-slate-300">Face-record coverage can be tracked from the dashboard and linked to the facial verification workflow.</p>
+                        </div>
+                        <div class="app-form-section">
+                            <div class="app-badge app-badge-warn">Operations</div>
+                            <p class="mt-3 text-sm leading-6 text-slate-300">Account confirmation, police assignment, criminal cases, and reporting stay within one admin workflow.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
 </html>
