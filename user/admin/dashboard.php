@@ -74,6 +74,7 @@ $casesCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM docket");
 
             <nav class="mt-6 space-y-2">
                 <a class="app-sidebar-link is-active" href="dashboard.php"><i class="fas fa-tachometer-alt w-5"></i><span>Dashboard</span></a>
+                <a class="app-sidebar-link" href="face_backfill.php"><i class="fa fa-database w-5"></i><span>Face Cache Backfill</span></a>
                 <a class="app-sidebar-link" href="people.php"><i class="fa fa-users w-5"></i><span>Citizens</span></a>
                 <a class="app-sidebar-link" href="non_citi.php"><i class="fa fa-globe w-5"></i><span>Non Citizens</span></a>
                 <a class="app-sidebar-link" href="police.php"><i class="fa fa-user-secret w-5"></i><span>Police</span></a>
@@ -159,6 +160,13 @@ $casesCount = dashboard_count($conn, "SELECT COUNT(*) AS count FROM docket");
                                 <i class="fa fa-line-chart text-rose-300"></i>
                             </div>
                             <p class="mt-2 text-sm leading-6 text-slate-300">Generate summaries and inspect the broader dataset.</p>
+                        </a>
+                        <a class="app-form-section block transition hover:-translate-y-1" href="face_backfill.php">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-lg font-semibold text-white">Backfill face cache</span>
+                                <i class="fa fa-database text-cyan-300"></i>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-slate-300">Generate cached descriptors for enrolled face records to speed up gallery search.</p>
                         </a>
                     </div>
                 </div>

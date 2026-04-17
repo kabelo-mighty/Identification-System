@@ -2,6 +2,8 @@
   const MODEL_PATH = 'assets/models';
   const MATCH_THRESHOLD = 0.5;
   const REFERENCES_ENDPOINT = 'reference-faces.php';
+  const REQUIRED_CONFIRMATION_FRAMES = 3;
+  const FRAME_INTERVAL_MS = 350;
 
   const state = {
     modelsLoaded: false,
@@ -34,6 +36,12 @@
     statusBadge.textContent = kind === 'progress' ? 'Processing' : kind === 'success' ? 'Matched' : kind === 'error' ? 'Not matched' : 'Ready';
     statusTitle.textContent = title;
     statusText.textContent = text;
+  }
+
+  function wait(milliseconds) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, milliseconds);
+    });
   }
 
   async function loadModels() {
@@ -79,13 +87,25 @@
       setStatus('progress', 'Indexing reference faces', `Preparing face ${index + 1} of ${references.length} for search.`);
 
       try {
-        const image = await loadImage(`${reference.imagePath}?ts=${Date.now()}`);
-        const descriptor = await computeDescriptor(image);
+        let descriptor = null;
+        let imageSrc = `${reference.imagePath}?ts=${Date.now()}`;
+
+        if (Array.isArray(reference.descriptor) && reference.descriptor.length > 0) {
+          descriptor = new Float32Array(reference.descriptor.map(function (value) {
+            return Number(value);
+          }));
+        }
+
+        if (!descriptor) {
+          const image = await loadImage(imageSrc);
+          descriptor = await computeDescriptor(image);
+          imageSrc = image.src;
+        }
 
         indexed.push({
           ...reference,
           descriptor,
-          imageSrc: image.src,
+          imageSrc,
         });
       } catch (error) {
         // Skip invalid or unreadable reference images instead of aborting the full index.
@@ -150,6 +170,23 @@
     return detection.descriptor;
   }
 
+  function findBestMatch(descriptor) {
+    let bestMatch = null;
+
+    state.referenceFaces.forEach(function (reference) {
+      const distance = faceapi.euclideanDistance(descriptor, reference.descriptor);
+
+      if (!bestMatch || distance < bestMatch.distance) {
+        bestMatch = {
+          reference,
+          distance,
+        };
+      }
+    });
+
+    return bestMatch;
+  }
+
   async function handleVerify() {
     if (!state.modelsLoaded) {
       setStatus('progress', 'Still loading', 'Please wait until the face models finish loading.');
@@ -165,39 +202,51 @@
     verifyButton.classList.add('opacity-60');
 
     try {
-      setStatus('progress', 'Searching face index', 'Comparing the live camera frame against all stored facial records.');
+      const confirmationMatches = [];
+      let confirmedId = null;
 
-      const liveDataUrl = captureSnapshot();
-      livePreview.src = liveDataUrl;
+      for (let frameIndex = 0; frameIndex < REQUIRED_CONFIRMATION_FRAMES; frameIndex += 1) {
+        setStatus('progress', 'Searching face index', `Comparing live frame ${frameIndex + 1} of ${REQUIRED_CONFIRMATION_FRAMES} against the stored face gallery.`);
 
-      const liveDescriptor = await computeDescriptor(await faceapi.fetchImage(liveDataUrl));
-      let bestMatch = null;
+        const liveDataUrl = captureSnapshot();
+        livePreview.src = liveDataUrl;
 
-      state.referenceFaces.forEach(function (reference) {
-        const distance = faceapi.euclideanDistance(liveDescriptor, reference.descriptor);
+        const liveDescriptor = await computeDescriptor(await faceapi.fetchImage(liveDataUrl));
+        const bestMatch = findBestMatch(liveDescriptor);
 
-        if (!bestMatch || distance < bestMatch.distance) {
-          bestMatch = {
-            reference,
-            distance,
-          };
+        if (!bestMatch) {
+          throw new Error('No enrolled face descriptors were available for comparison.');
         }
-      });
 
-      if (!bestMatch) {
-        throw new Error('No enrolled face descriptors were available for comparison.');
+        if (bestMatch.distance > MATCH_THRESHOLD) {
+          referencePreview.src = bestMatch.reference.imageSrc;
+          distanceValue.textContent = bestMatch.distance.toFixed(3);
+          setStatus('error', 'Face not recognized', `No enrolled face matched closely enough. Best distance found: ${bestMatch.distance.toFixed(3)}.`);
+          return;
+        }
+
+        if (confirmedId === null) {
+          confirmedId = bestMatch.reference.idNumber;
+        } else if (confirmedId !== bestMatch.reference.idNumber) {
+          throw new Error('The captured frames matched different people. Hold the camera steady and try again.');
+        }
+
+        confirmationMatches.push(bestMatch);
+
+        if (frameIndex < REQUIRED_CONFIRMATION_FRAMES - 1) {
+          await wait(FRAME_INTERVAL_MS);
+        }
       }
 
-      referencePreview.src = bestMatch.reference.imageSrc;
-      distanceValue.textContent = bestMatch.distance.toFixed(3);
+      const averageDistance = confirmationMatches.reduce(function (sum, match) {
+        return sum + match.distance;
+      }, 0) / confirmationMatches.length;
+      const finalMatch = confirmationMatches[confirmationMatches.length - 1];
 
-      if (bestMatch.distance <= MATCH_THRESHOLD) {
-        setStatus('success', 'Face matched', `${bestMatch.reference.fullName || 'Matched person'} was identified with distance ${bestMatch.distance.toFixed(3)}. Redirecting to the information page.`);
-        window.location.href = `Information.php?edt=${encodeURIComponent(bestMatch.reference.idNumber)}`;
-        return;
-      }
-
-      setStatus('error', 'Face not recognized', `No enrolled face matched closely enough. Best distance found: ${bestMatch.distance.toFixed(3)}.`);
+      referencePreview.src = finalMatch.reference.imageSrc;
+      distanceValue.textContent = averageDistance.toFixed(3);
+      setStatus('success', 'Face matched', `${finalMatch.reference.fullName || 'Matched person'} was confirmed across ${REQUIRED_CONFIRMATION_FRAMES} frames with average distance ${averageDistance.toFixed(3)}. Redirecting to the information page.`);
+      window.location.href = `Information.php?edt=${encodeURIComponent(finalMatch.reference.idNumber)}`;
     } catch (error) {
       setStatus('error', 'Verification failed', error.message || 'The verification flow could not complete.');
     } finally {

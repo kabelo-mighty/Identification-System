@@ -1,4 +1,51 @@
+const FACE_MODEL_PATH = '../../faceapi/assets/models';
+let faceModelsPromise = null;
+let latestSnapshotDataUrl = '';
+
+function ensureFaceModelsLoaded() {
+    if (!faceModelsPromise) {
+        faceModelsPromise = Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_PATH),
+            faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_PATH),
+            faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_PATH)
+        ]);
+    }
+
+    return faceModelsPromise;
+}
+
+function dataUrlToImage(dataUrl) {
+    return new Promise(function(resolve, reject) {
+        const img = new Image();
+        img.onload = function() {
+            resolve(img);
+        };
+        img.onerror = function() {
+            reject(new Error('Snapshot preview could not be loaded for face analysis.'));
+        };
+        img.src = dataUrl;
+    });
+}
+
+async function buildFaceDescriptor(dataUrl) {
+    await ensureFaceModelsLoaded();
+
+    const image = await dataUrlToImage(dataUrl);
+    const detection = await faceapi
+        .detectSingleFace(image, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+    if (!detection) {
+        throw new Error('No clear face was detected in the captured image.');
+    }
+
+    return Array.from(detection.descriptor);
+}
+
 $(document).ready(function() {
+    ensureFaceModelsLoaded();
+
     Webcam.set({
         width: 320,
         height: 240,
@@ -37,8 +84,33 @@ $(document).ready(function() {
         $('#uploadphoto').removeClass('d-block');
     });
 
-    $('#photoForm').on('submit', function(e) {
+    $('#photoForm').on('submit', async function(e) {
         e.preventDefault();
+        const $uploadButton = $('#uploadphoto');
+
+        if (!latestSnapshotDataUrl) {
+            swal({
+                title: 'Warning',
+                text: 'Capture a photo first before saving.',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        try {
+            $uploadButton.prop('disabled', true);
+            const descriptor = await buildFaceDescriptor(latestSnapshotDataUrl);
+            $('#faceDescriptor').val(JSON.stringify(descriptor));
+        } catch (error) {
+            $uploadButton.prop('disabled', false);
+            swal({
+                title: 'Face not detected',
+                text: error.message || 'A usable face could not be extracted from the captured photo.',
+                icon: 'warning'
+            });
+            return;
+        }
+
         $.ajax({
             url: 'photoUpload.php',
             type: 'POST',
@@ -46,8 +118,12 @@ $(document).ready(function() {
             contentType: false,
             processData: false,
             success: function(data) {
+                $uploadButton.prop('disabled', false);
                 if(data == 'success') {
                     Webcam.reset();
+                    latestSnapshotDataUrl = '';
+                    $('#faceDescriptor').val('');
+                    $('#photoStore').val('');
 
                     $('#my_camera').addClass('d-block');
                     $('#my_camera').removeClass('d-none');
@@ -82,6 +158,14 @@ $(document).ready(function() {
                         icon: 'error'
                     })
                 }
+            },
+            error: function() {
+                $uploadButton.prop('disabled', false);
+                swal({
+                    title: 'Error',
+                    text: 'Something went wrong',
+                    icon: 'error'
+                })
             }
         })
     })
@@ -91,6 +175,7 @@ function take_snapshot()
 {
     //take snapshot and get image data
     Webcam.snap(function(data_uri) {
+        latestSnapshotDataUrl = data_uri;
         //display result image
         $('#results').html('<img src="' + data_uri + '" class="d-block mx-auto rounded"/>');
 

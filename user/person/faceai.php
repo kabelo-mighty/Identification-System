@@ -99,6 +99,7 @@
                     <div id="results" class="d-none"></div>
                     <form method="post" id="photoForm">
                         <input type="hidden" id="photoStore" name="photoStore" value="">
+                        <input type="hidden" id="faceDescriptor" name="faceDescriptor" value="">
                     </form>
                 </div>
                 <div class="modal-footer border-slate-800">
@@ -115,6 +116,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" crossorigin="anonymous"></script>
     <script src="./plugin/sweetalert/sweetalert.min.js"></script>
     <script src="./plugin/webcamjs/webcam.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="main.js"></script>
     <script>
         document.getElementById('retakephoto').classList.add('d-none');

@@ -76,6 +76,18 @@ CREATE TABLE `face_identification` (
   `admin_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `face_descriptor_cache`
+--
+
+CREATE TABLE `face_descriptor_cache` (
+  `person_id` int(11) NOT NULL,
+  `descriptor_json` longtext NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 --
 -- Dumping data for table `face_identification`
 --
@@ -150,6 +162,12 @@ ALTER TABLE `docket`
 --
 ALTER TABLE `face_identification`
   ADD PRIMARY KEY (`face_id`);
+
+--
+-- Indexes for table `face_descriptor_cache`
+--
+ALTER TABLE `face_descriptor_cache`
+  ADD PRIMARY KEY (`person_id`);
 
 --
 -- Indexes for table `person`
