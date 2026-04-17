@@ -47,10 +47,10 @@
             <section>
                 <div class="brand-badge mb-6">
                     <i class="fa fa-circle text-[0.45rem]"></i>
-                    AI-assisted identity verification
+                    identity verification
                 </div>
                 <h1 class="max-w-3xl text-5xl font-extrabold leading-tight text-white md:text-6xl">
-                    Modern identity records, facial verification, and secure public-service workflows.
+               Facial verification, and secure public-service workflows.
                 </h1>
                 <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
                     This platform brings registration, profile management, police verification, and facial identity checks into one streamlined system built for high-trust records.
