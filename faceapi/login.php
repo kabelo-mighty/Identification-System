@@ -58,7 +58,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                        sans: ['poppins', 'ui-sans-serif', 'system-ui', 'sans-serif']
                     }
                 }
             }
