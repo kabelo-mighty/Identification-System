@@ -117,9 +117,10 @@ $(document).ready(function() {
             data: new FormData(this),
             contentType: false,
             processData: false,
-            success: function(data) {
+            dataType: 'json',
+            success: function(response) {
                 $uploadButton.prop('disabled', false);
-                if(data == 'success') {
+                if(response && response.success) {
                     Webcam.reset();
                     latestSnapshotDataUrl = '';
                     $('#faceDescriptor').val('');
@@ -143,33 +144,47 @@ $(document).ready(function() {
 
                     swal({
                         title: 'Success',
-                        text: 'Photo uploaded successfully',
+                        text: response.message || 'Photo uploaded successfully',
                         icon: 'success',
                         buttons: false,
                         closeOnClickOutside: false,
                         closeOnEsc: false,
                         timer: 2000
-                    })
+                    });
                 }
                 else {
                     swal({
                         title: 'Error',
-                        text: 'Something went wrong',
+                        text: (response && response.message) ? response.message : 'Something went wrong',
                         icon: 'error'
-                    })
+                    });
                 }
             },
-            error: function() {
+            error: function(xhr) {
                 $uploadButton.prop('disabled', false);
+                let message = 'Something went wrong';
+
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                } else if (xhr && xhr.responseText) {
+                    try {
+                        const parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.message) {
+                            message = parsed.message;
+                        }
+                    } catch (error) {
+                    }
+                }
+
                 swal({
                     title: 'Error',
-                    text: 'Something went wrong',
+                    text: message,
                     icon: 'error'
-                })
+                });
             }
-        })
-    })
-})
+        });
+    });
+});
 
 function take_snapshot()
 {
