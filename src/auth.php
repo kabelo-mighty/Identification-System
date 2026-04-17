@@ -33,6 +33,8 @@ function app_redirect($location, $message = null)
 
 function app_get_flash_message()
 {
+    app_start_session();
+
     if (!isset($_GET['message'])) {
         return null;
     }

@@ -25,7 +25,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         app_redirect('login.php', 'Wrong email or password.');
     }
 
-    if (strcasecmp((string) $row['employee_type'], 'Police') !== 0) {
+    $employeeType = trim((string) ($row['employee_type'] ?? ''));
+
+    if (strcasecmp($employeeType, 'Police') !== 0) {
         app_redirect('login.php', 'Only authorized police users can use this service.');
     }
 
@@ -58,7 +60,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['poppins', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif']
                     }
                 }
             }
